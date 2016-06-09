@@ -41,7 +41,7 @@
   const static uint8_t LEGS_PARAM_V_BEG = 5; // velocity at beginning, may be negative
   const static uint8_t LEGS_PARAM_V_END = 6; // velocity at end, may be negative
   const static uint8_t LEGS_PARAM_NUM = 7; // number of move part parameters
-  const static String LEGS_PARAM_NAME[LEGS_PARAM_NUM] = {"DIST", "DIR", "UPDN", "V_MAX", "A_MAX", "V_BEG", "V_END"};
+  const static String LEGS_PARAM_NAME[LEGS_PARAM_NUM] = {"_DIST", "__DIR", "_UPDN", "V_MAX", "A_MAX", "V_BEG", "V_END"};
 
   const static uint8_t LEGS_MOVE_END = 0; // start of the end (after the end)
   const static uint8_t LEGS_MOVE_DEC2 = 1; // start of the (2nd) deceleration
@@ -51,7 +51,7 @@
   const static uint8_t LEGS_MOVE_DEC1 = 5; // start of the deceleration
   const static uint8_t LEGS_MOVE_CV1 = 6; // start of the constant velocity
   const static uint8_t LEGS_MOVE_POINT_NUM = 7;
-  const static String LEGS_MOVE_NAME[LEGS_MOVE_POINT_NUM] = {"END", "DEC2", "CV2", "ACC2", "WAIT", "DEC1", "CV1"};
+  const static String LEGS_MOVE_NAME[LEGS_MOVE_POINT_NUM] = {"_END", "DEC2", "_CV2", "ACC2", "WAIT", "DEC1", "_CV1"};
   const static uint8_t LEGS_MOVE_TIME = 0;
   const static uint8_t LEGS_MOVE_DIST = 1;
   const static uint8_t LEGS_MOVE_TD_NUM = 2;
@@ -91,6 +91,8 @@
   void legs_position_tests(void);
   void legs_position(float the_time, float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], float legs_position[3], uint8_t indent);
   float legs_distance(float the_time, float parameters[LEGS_PARAM_NUM], float move_point[][LEGS_MOVE_TD_NUM], uint8_t indent);
+  void legs_print_parameters(float parameters[XYZ][LEGS_PARAM_NUM], uint8_t indent);
+  void legs_print_move_points(float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent);
   void legs_coor_move_points(float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent);
   void legs_move_point_scale_a_max(float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], float t, uint8_t indent);
   void legs_move_point(float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], uint8_t indent);
