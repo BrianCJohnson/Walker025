@@ -276,7 +276,7 @@ float legs_distance(float the_time, float parameters[LEGS_PARAM_NUM], float move
   float delta_time;
   float distance;
 
-  static const boolean local_debug = true;
+  static const boolean local_debug = false;
   if (local_debug){
     DEBUG_INDENT(indent);
     DEBUG_PRINT("Beg legs_distance, the_time: ");
@@ -440,21 +440,21 @@ void legs_print_move_points(float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOV
 // remember, distances are alway positive! If parameters[coor][LEGS_PARAM_DIST] is not, it will become positive and the sign of parameters[coor][LEGS_PARAM_DIR] will be reversed
 //========================================================
 void legs_coor_move_points(float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent){
+  const char routine[] = "legs_coor_move_points";
+  const char time_lt_zero[] = "time is less than zero";
+  const char times_are_zero[] = "all times are zero";
+
   static const boolean local_debug = true;
   if(local_debug){
     DEBUG_INDENT(indent);
     DEBUG_PRINTLN("Beg legs_coor_move_points()");
   }
-  static const uint8_t xi = 0; // coor index for x in move_point(s)
-  static const uint8_t yi = 1; // coor index for y in move_point(s)
-  static const uint8_t zi = 2; // coor index for z in move_point(s)
-  //static const uint8_t ti = 0; // index for time in move_point(s)
-  //static const uint8_t LEGS_MOVE_DIST = 1; // index for LEGS_MOVE_DISTst in move_point(s)
+//  static const uint8_t xi = 0; // coor index for x in move_point(s)
+//  static const uint8_t yi = 1; // coor index for y in move_point(s)
+//  static const uint8_t zi = 2; // coor index for z in move_point(s)
+
   // first convert postitions to distances and sign
-  float z; // distance (positive value)
-//  float x, y, z; // distance (positive value)
-//  float dir_x, dir_y, dir_z; // direction (-1.0 or 1.0)
-//  float x_abs, y_abs, z_abs;
+//  float z; // distance (positive value)
   for(uint8_t coor=0; coor<XYZ; coor++){
     if(parameters[coor][LEGS_PARAM_DIST] >= 0.0){
       parameters[coor][LEGS_PARAM_DIR] = 1.0;
@@ -463,209 +463,115 @@ void legs_coor_move_points(float parameters[XYZ][LEGS_PARAM_NUM], float move_poi
       parameters[coor][LEGS_PARAM_DIR] = -1.0;      
     }
   }
-//  com_sign_mag(parameters[xi][LEGS_PARAM_DIST], &dir[xi], &x_abs);
-//  com_sign_mag(parameters[yi][LEGS_PARAM_DIST], &dir[yi], &y_abs);
-//  com_sign_mag(parameters[zi][LEGS_PARAM_DIST], &dir[zi], &z_abs);
-//  x = parameters[xi][LEGS_PARAM_DIST]; // non-negative value only
-//  y = parameters[yi][LEGS_PARAM_DIST]; // non-negative value only
-  z = parameters[zi][LEGS_PARAM_DIST]; // non-negative value only
-//  dir_x = parameters[xi][LEGS_PARAM_DIR]; // direction (-1.0 or 1.0)
-//  dir_y = parameters[yi][LEGS_PARAM_DIR]; // direction (-1.0 or 1.0)
-//  dir_z = parameters[zi][LEGS_PARAM_DIR]; // direction (-1.0 or 1.0)
   if(local_debug){
     legs_print_parameters(parameters, indent+1);
-//    DEBUG_INDENT(indent+1);
-//    DEBUG_PRINT("\t\t __X___\t __Y___\t __Z___\n");
-//    DEBUG_INDENT(indent+1);
-//    DEBUG_PRINTF("DIR : \t%7.2f\t%7.2f\t%7.2f\n", dir_x, dir_y, dir_z);
-//    DEBUG_INDENT(indent+1);
-//    DEBUG_PRINTF("DIST: \t%7.2f\t%7.2f\t%7.2f\n", x, y, z);
-//    DEBUG_INDENT(indent+1);
-//    DEBUG_PRINT("UPDN: ");     
-//    for(uint8_t coor=0; coor<XYZ; coor++){
-//      DEBUG_PRINTF("\t%7.2f", parameters[coor][LEGS_PARAM_UPDN]);
-//    }
-//    DEBUG_PRINTLN();
   }
 
-  // now compute the x and y times
-  legs_move_point(parameters[xi], move_points[xi], indent+1); // calculate the move_points for x
-  legs_move_point(parameters[yi], move_points[yi], indent+1); // calculate the move_points for y
-  legs_move_point(parameters[zi], move_points[zi], indent+1); // calculate the move_points for z
+  // now compute the x, y and z move times
+  for(uint8_t coor=0; coor<XYZ; coor++){
+    legs_move_point(parameters[coor], move_points[coor], indent+1); // calculate the move_points coor
+  }
   if(local_debug){
     legs_print_move_points(move_points, indent+1);
-//    DEBUG_INDENT(indent+1);
-//    DEBUG_PRINTF("X, end_t: %7.2f", move_points[xi][LEGS_MOVE_END][LEGS_MOVE_TIME]);
-//    DEBUG_PRINTF(", dec_t: %7.2f", move_points[xi][LEGS_MOVE_DEC2][LEGS_MOVE_TIME]);
-//    DEBUG_PRINTF(", cv_t: %7.2f\n", move_points[xi][LEGS_MOVE_CV2][LEGS_MOVE_TIME]);
-//    DEBUG_INDENT(indent+1);
-//    DEBUG_PRINTF("Y, end_t: %7.2f", move_points[yi][LEGS_MOVE_END][LEGS_MOVE_TIME]);
-//    DEBUG_PRINTF(", dec_t: %7.2f", move_points[yi][LEGS_MOVE_DEC2][LEGS_MOVE_TIME]);
-//    DEBUG_PRINTF(", cv_t: %7.2f\n", move_points[yi][LEGS_MOVE_CV2][LEGS_MOVE_TIME]);
+  }
+  // if the move time is close to zero, make it zero
+  // and find the slowest time and use that for the move
+  float t[XYZ]; // time for each coordinate's move
+  float slowest_time = 0.0; // initialize the slowest time to zero
+  uint8_t slowest_coor;
+  for(uint8_t coor=0; coor<XYZ; coor++){
+    t[coor] = move_points[coor][LEGS_MOVE_END][LEGS_MOVE_TIME];
+    if(abs(t[coor]) <= COM_ZERO){
+      t[coor] = 0.0;
+      move_points[coor][LEGS_MOVE_END][LEGS_MOVE_TIME] = t[coor];
+    }
+    if(t[coor] < 0.0) com_err_msg(routine, time_lt_zero); // make sure the time are not less than zero, otherwise error!
+    // if this is an up/down move, double the time
+    if(parameters[coor][LEGS_PARAM_UPDN] > 0.0){
+      t[coor] = 2.0 * t[coor];
+    }
+    if(t[coor] > slowest_time){
+      // this coordinate is slower
+      slowest_coor = coor; // assume that x is the slowest coordinate
+      slowest_time = t[coor]; // set the new slowest time
+    }
+  }
+  // check to see if the slowest is zero, that means they're all zero
+  // do we expect to ever have a move with no time??
+  if(slowest_time < COM_ZERO){
+    // they are all effectively zero
+    com_err_msg(routine, times_are_zero); 
   }
 
-  // find the slowest time and use that for the move
-  float scale;
-//  static const float zero_thresh = 0.00001;
-  // assume x move time was longer so slow down the y move
-  uint8_t  fast_coor = yi;
-  uint8_t  slow_coor = xi;
-  if((abs(move_points[xi][LEGS_MOVE_END][LEGS_MOVE_TIME]) < COM_ZERO) && (abs(move_points[yi][LEGS_MOVE_END][LEGS_MOVE_TIME]) < COM_ZERO)){
-    // both move times are zero, set scale = 1.0
-    scale = 1.0;
-  } else {
-    if(move_points[xi][LEGS_MOVE_END][LEGS_MOVE_TIME] < move_points[yi][LEGS_MOVE_END][LEGS_MOVE_TIME]){
-      // y move time was longer so slow down the x move
-      fast_coor = xi;
-      slow_coor = yi;
+  // now slow down the faster movements by recomputing their a_max parameters
+  for(uint8_t coor=0; coor<XYZ; coor++){
+    if(coor == slowest_coor){
+      // it's already slow, do nothing
     } else {
-      // don't need to do anything, already assumed x move time was longer so slow down the y move
-    }
-//    scale = move_points[fast_coor][LEGS_MOVE_END][LEGS_MOVE_TIME] / move_points[slow_coor][LEGS_MOVE_END][LEGS_MOVE_TIME]; // less than 1.0
-  }
-//  if(local_debug){
-//    DEBUG_INDENT(indent+1);
-//    DEBUG_PRINTF("h scale: %7.2f\n", scale);
-//  }
-//
-//  parameters[fast_coor][LEGS_PARAM_V_MAX] = parameters[fast_coor][LEGS_PARAM_V_MAX] * scale;
-//  parameters[fast_coor][LEGS_PARAM_A_MAX] = parameters[fast_coor][LEGS_PARAM_A_MAX] * scale * scale;
-  float h_time = move_points[slow_coor][LEGS_MOVE_END][LEGS_MOVE_TIME]; // horizontal move time is the longer of the two
-//  legs_move_scale_a_max(parameters[fast_coor], h_time, indent+1); // scale LEGS_PARAM_A_MAX in the fast coor so that the fast move happens in h_time
-  legs_move_point_scale_a_max(parameters[fast_coor], move_points[fast_coor], h_time, indent+1); // now recompute the move_points for the fast coordinate that we slowed down
-//  move_points[fast_coor][LEGS_MOVE_END][LEGS_MOVE_TIME] = h_time; // in case the distance was zero the time would be zero, this sets it to the horizontal time
-//
-//  for (uint8_t xy=0; xy<2; xy++){
-//    for (uint8_t point=0; point<3; point++){
-//      move_points[xy][point][LEGS_MOVE_TIME] = move_points[zi][point][LEGS_MOVE_TIME]; // keep the same times for x and y as the horizontal
-//      move_points[xy][point][LEGS_MOVE_DIST] = xy_scale[xy] * move_points[zi][point][LEGS_MOVE_DIST]; // scale the distances for x and y from the horizontal
-//    }
-//    parameters[xy][LEGS_PARAM_V_MAX] = parameters[xy][LEGS_PARAM_V_MAX] * xy_scale[xy];
-//    parameters[xy][LEGS_PARAM_A_MAX] = parameters[xy][LEGS_PARAM_A_MAX] * xy_scale[xy];
-//  }
-  
-  // now compute the z times and distances
-  legs_move_point(parameters[zi], move_points[zi], indent+1); // calculate points for the initial upward vertical move
-  float v_time = move_points[zi][LEGS_MOVE_END][LEGS_MOVE_TIME]; // z, at end, time
-  if(parameters[zi][LEGS_PARAM_UPDN] > 0.0){
-    // this is an up/down motion
-    // check to see if we can make a vertical move up and a vertical move down in the time of the horizontal move
-    // RIGHT NOW THIS ASSUMES v_beg = v_end = 0, the following needs to be changed to accomodate v_beg and v_end !!!
-    // RIGHT NOW THIS ASSUMES that the foot will end at a displacement of 0.0, the DIST value is used as the height that the foot will be lifted.
-    float half_h_time = 0.5 * h_time;
-    if(local_debug){
-      DEBUG_INDENT(indent+1);
-      DEBUG_PRINT("v_time: ");
-      DEBUG_PRINTF("%7.2f", v_time);
-      DEBUG_PRINT(", half_h_time: ");
-      DEBUG_PRINTF("%7.2f\n", half_h_time);
-    }
-    if(v_time <= half_h_time){
-      // good, we can do the vertical up and down in h_time
-      if(local_debug){
-        DEBUG_INDENT(indent+1);
-        DEBUG_PRINTLN("good, we can do the vertical up and down in h_time.");
-      }
-    }else{
-      // we will reduce the vertical distance to fit the vertical up and down in h_time
-      // in other words reduce the vertical to fit the vertical acc up dec up (or down) in half_h_time
-      z = 0.25 * parameters[zi][LEGS_PARAM_A_MAX] * half_h_time * half_h_time; // total z = 2.0 * 0.5*a_max*(half_h_time/2)*(half_h_time/2)
-      parameters[zi][LEGS_PARAM_DIST] = z; // update the parameters with the new distance
-      legs_move_point(parameters[zi], move_points[zi], indent+1); // recalculate points for the initial upward new vertical move
-      v_time = move_points[zi][LEGS_MOVE_END][LEGS_MOVE_TIME]; // z, at end, time
-      if(local_debug){
-        DEBUG_INDENT(indent+1);
-        DEBUG_PRINTLN("we can't do the vertical up and down in h_time.");
-        DEBUG_INDENT(indent+1);
-        DEBUG_PRINT("Reducing the  vertical move to: ");
-        DEBUG_PRINTF("%7.2f\n", z);
+      // need to slow down this coor move unless it's very close to the slowest_time
+      if(abs(slowest_time - t[coor]) < COM_ZERO){
+        // it's nearly the same time as the slowest_time, do nothing
+      } else {
+        // scale the faster coor moves
+        if(parameters[coor][LEGS_PARAM_UPDN] > 0.0){
+          // this is an up/down move so halve the target time
+          legs_move_point_scale_a_max(parameters[coor], move_points[coor], 0.5*slowest_time, indent+1); // now recompute the move_points for the fast coordinate that we want slowed down
+          legs_move_point_for_updn(move_points[coor], indent+1); // now compute the move_points for the up/down
+        } else {
+          // this is not an up/down move (so don't halve the target time)
+          legs_move_point_scale_a_max(parameters[coor], move_points[coor], slowest_time, indent+1); // now recompute the move_points for the fast coordinate that we want slowed down
+        }
       }
     }
-    // now shift the values and compute the other move_points so we include the downward part of the vertical move
-    // for z: {{end_time, end_dist}, {dec2_time, dec2_dist}, {cv2_time, cv2_dist}, {acc2_time, acc2_dist}, {wait_time, wait_dist}, {dec1_time, dec1_dist}, {cv1_time, cv1_dist}}
-    // get some info on acc/dec and cv periods
-    float acc_t =  move_points[zi][LEGS_MOVE_CV2][LEGS_MOVE_TIME]; // all 4 acc/dec periods have the same time
-    float acc_d =  move_points[zi][LEGS_MOVE_CV2][LEGS_MOVE_DIST]; // all 4 acc/dec periods have the same distance
-    float cv_t =  move_points[zi][LEGS_MOVE_DEC2][LEGS_MOVE_TIME] - acc_t; // both cv periods have the same time
-    float cv_d =  move_points[zi][LEGS_MOVE_DEC2][LEGS_MOVE_DIST] - acc_d; // both cv periods have the same distance
-    // calculate time and distance for the first 3 points from the start
-    move_points[zi][LEGS_MOVE_CV1][LEGS_MOVE_TIME] = acc_t; // at start of cv 1
-    move_points[zi][LEGS_MOVE_CV1][LEGS_MOVE_DIST] = acc_d; // at start of cv 1
-    move_points[zi][LEGS_MOVE_DEC1][LEGS_MOVE_TIME] = move_points[zi][LEGS_MOVE_CV1][LEGS_MOVE_TIME] + cv_t; // at start of dec 1
-    move_points[zi][LEGS_MOVE_DEC1][LEGS_MOVE_DIST] = move_points[zi][LEGS_MOVE_CV1][LEGS_MOVE_DIST] + cv_d; // at start of dec 1
-    move_points[zi][LEGS_MOVE_WAIT][LEGS_MOVE_TIME] = move_points[zi][LEGS_MOVE_DEC1][LEGS_MOVE_TIME] + acc_t; // at start of wait
-    move_points[zi][LEGS_MOVE_WAIT][LEGS_MOVE_DIST] = move_points[zi][LEGS_MOVE_DEC1][LEGS_MOVE_DIST] + acc_d; // at start of wait
-    // calculate time and distance for the last 4 points from the end
-    move_points[zi][LEGS_MOVE_END][LEGS_MOVE_TIME] = h_time; // the end of the horizontal move
-    move_points[zi][LEGS_MOVE_END][LEGS_MOVE_DIST] = 0.0; // the end of the horizontal move, back to z = 0.0
-    move_points[zi][LEGS_MOVE_DEC2][LEGS_MOVE_TIME] = move_points[zi][LEGS_MOVE_END][LEGS_MOVE_TIME] - acc_t; // at start of dec 2
-    move_points[zi][LEGS_MOVE_DEC2][LEGS_MOVE_DIST] = move_points[zi][LEGS_MOVE_END][LEGS_MOVE_DIST] + acc_d; // at start of dec 2
-    move_points[zi][LEGS_MOVE_CV2][LEGS_MOVE_TIME] = move_points[zi][LEGS_MOVE_DEC2][LEGS_MOVE_TIME] - cv_t; // at start of cv 2
-    move_points[zi][LEGS_MOVE_CV2][LEGS_MOVE_DIST] = move_points[zi][LEGS_MOVE_DEC2][LEGS_MOVE_DIST] + cv_d; // at start of cv 2
-    move_points[zi][LEGS_MOVE_ACC2][LEGS_MOVE_TIME] = move_points[zi][LEGS_MOVE_CV2][LEGS_MOVE_TIME] - acc_t; // at start of acc 2
-    move_points[zi][LEGS_MOVE_ACC2][LEGS_MOVE_DIST] = move_points[zi][LEGS_MOVE_CV2][LEGS_MOVE_DIST] + acc_d; // at start of acc 2
-  } else {
-    // this is not an up/down move
-    if(local_debug){
-      DEBUG_INDENT(indent+1);
-      DEBUG_PRINTLN("this is not an up/down move");
-    }
-    if(v_time <= h_time){
-      // if the z move (v_time) is shorter than the h_time (slowest time for x or y) then we're going to have to scale to slow z !!!
-      // xy move time was longer so slow down the z move
-      if(local_debug){
-        DEBUG_INDENT(indent+1);
-        DEBUG_PRINTLN("the z move (v_time) is shorter than the h_time");
-      }
-      scale = v_time/h_time;
-      fast_coor = zi;
-      //slow_coor = yi;
-      parameters[fast_coor][LEGS_PARAM_V_MAX] = parameters[fast_coor][LEGS_PARAM_V_MAX] * scale;
-      parameters[fast_coor][LEGS_PARAM_A_MAX] = parameters[fast_coor][LEGS_PARAM_A_MAX] * scale * scale;
-      legs_move_point(parameters[fast_coor], move_points[fast_coor], indent+1); // now recompute the move_points for the fast coordinate that we slowed down
-      move_points[fast_coor][LEGS_MOVE_END][LEGS_MOVE_TIME] = h_time; // in case the distance was zero the time would be zero, this sets it to the horizontal time
-    } else {
-      // if the z move (v_time) is longer than the h_time (slowest time for x or y) then we're going to have to scale to slow x and y !!!
-      // z move time was longer so slow down the xy move
-      if(local_debug){
-        DEBUG_INDENT(indent+1);
-        DEBUG_PRINTLN("the z move (v_time) is longer than the h_time");
-      }
-      scale = h_time/v_time;
-      //slow_coor = zi;
-      fast_coor = xi;
-      parameters[fast_coor][LEGS_PARAM_V_MAX] = parameters[fast_coor][LEGS_PARAM_V_MAX] * scale;
-      parameters[fast_coor][LEGS_PARAM_A_MAX] = parameters[fast_coor][LEGS_PARAM_A_MAX] * scale * scale;
-      legs_move_point(parameters[fast_coor], move_points[fast_coor], indent+1); // now recompute the move_points for the fast coordinate that we slowed down
-      move_points[fast_coor][LEGS_MOVE_END][LEGS_MOVE_TIME] = v_time; // in case the distance was zero the time would be zero, this sets it to the vertical time
-      fast_coor = yi;
-      parameters[fast_coor][LEGS_PARAM_V_MAX] = parameters[fast_coor][LEGS_PARAM_V_MAX] * scale;
-      parameters[fast_coor][LEGS_PARAM_A_MAX] = parameters[fast_coor][LEGS_PARAM_A_MAX] * scale * scale;
-      legs_move_point(parameters[fast_coor], move_points[fast_coor], indent+1); // now recompute the move_points for the fast coordinate that we slowed down
-      move_points[fast_coor][LEGS_MOVE_END][LEGS_MOVE_TIME] = v_time; // in case the distance was zero the time would be zero, this sets it to the vertical time
-    }
-    
-//      if(local_debug){
-//        DEBUG_INDENT(indent+1);
-//        DEBUG_PRINTLN("the z move (v_time) is longer than the h_time");
-//        //mode_print_move_part_points(indent+1);
-//        DEBUG_INDENT(indent+1);
-//        DEBUG_PRINT("Z, end_t: ");
-//        DEBUG_PRINT(move_points[zi][LEGS_MOVE_END][LEGS_MOVE_TIME]);
-//        DEBUG_PRINT(", dec_t: ");
-//        DEBUG_PRINT(move_points[zi][LEGS_MOVE_DEC2][LEGS_MOVE_TIME]);
-//        DEBUG_PRINT(", cv_t: ");
-//        DEBUG_PRINTLN(move_points[zi][LEGS_MOVE_CV2][LEGS_MOVE_TIME]);
-//      }
-//      // for now just set the end time for all coordinates to the z end time !!!
-//      move_points[xi][LEGS_MOVE_END][LEGS_MOVE_TIME] = move_points[zi][LEGS_MOVE_END][LEGS_MOVE_TIME];
-//      move_points[yi][LEGS_MOVE_END][LEGS_MOVE_TIME] = move_points[zi][LEGS_MOVE_END][LEGS_MOVE_TIME];
   }
   if(local_debug){
+    legs_print_move_points(move_points, indent+1);
     DEBUG_INDENT(indent);
     DEBUG_PRINTLN("End legs_coor_move_points");
   }
 } // end legs_coor_move_points
+
+
+//========================================================
+// legs_move_point_for_updn
+// uses the move_point data from a unidirectional move to create the move_point data for an up/down move
+// note: the time for the up/down move will be twice as much as for the unidirectional move
+//========================================================
+void legs_move_point_for_updn(float move_point[LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent){
+  static const boolean local_debug = true;
+  if(local_debug){
+    DEBUG_INDENT(indent);
+    DEBUG_PRINTLN("Beg legs_move_point_for_updn");
+  }
+  // shift the values and compute the other move_points so we include the downward part of an up/down move
+  // {{end_time, end_dist}, {dec2_time, dec2_dist}, {cv2_time, cv2_dist}, {acc2_time, acc2_dist}, {wait_time, wait_dist}, {dec1_time, dec1_dist}, {cv1_time, cv1_dist}}
+  // get some info on acc/dec and cv periods
+  float end_time =  2.0 * move_point[LEGS_MOVE_END][LEGS_MOVE_TIME]; // the time for the up/down move will be twice as much as for the unidirectional move
+  float acc_t =  move_point[LEGS_MOVE_CV2][LEGS_MOVE_TIME]; // all 4 acc/dec periods have the same time
+  float acc_d =  move_point[LEGS_MOVE_CV2][LEGS_MOVE_DIST]; // all 4 acc/dec periods have the same distance
+  float cv_t =  move_point[LEGS_MOVE_DEC2][LEGS_MOVE_TIME] - acc_t; // both cv periods have the same time
+  float cv_d =  move_point[LEGS_MOVE_DEC2][LEGS_MOVE_DIST] - acc_d; // both cv periods have the same distance
+  // calculate time and distance for the first 3 points from the start
+  move_point[LEGS_MOVE_CV1][LEGS_MOVE_TIME] = acc_t; // at start of cv 1
+  move_point[LEGS_MOVE_CV1][LEGS_MOVE_DIST] = acc_d; // at start of cv 1
+  move_point[LEGS_MOVE_DEC1][LEGS_MOVE_TIME] = move_point[LEGS_MOVE_CV1][LEGS_MOVE_TIME] + cv_t; // at start of dec 1
+  move_point[LEGS_MOVE_DEC1][LEGS_MOVE_DIST] = move_point[LEGS_MOVE_CV1][LEGS_MOVE_DIST] + cv_d; // at start of dec 1
+  move_point[LEGS_MOVE_WAIT][LEGS_MOVE_TIME] = move_point[LEGS_MOVE_DEC1][LEGS_MOVE_TIME] + acc_t; // at start of wait
+  move_point[LEGS_MOVE_WAIT][LEGS_MOVE_DIST] = move_point[LEGS_MOVE_DEC1][LEGS_MOVE_DIST] + acc_d; // at start of wait
+  // calculate time and distance for the last 4 points from the end
+  move_point[LEGS_MOVE_END][LEGS_MOVE_TIME] = end_time; // the end of the move
+  move_point[LEGS_MOVE_END][LEGS_MOVE_DIST] = 0.0; // the end of the move, back to z = 0.0
+  move_point[LEGS_MOVE_DEC2][LEGS_MOVE_TIME] = move_point[LEGS_MOVE_END][LEGS_MOVE_TIME] - acc_t; // at start of dec 2
+  move_point[LEGS_MOVE_DEC2][LEGS_MOVE_DIST] = move_point[LEGS_MOVE_END][LEGS_MOVE_DIST] + acc_d; // at start of dec 2
+  move_point[LEGS_MOVE_CV2][LEGS_MOVE_TIME] = move_point[LEGS_MOVE_DEC2][LEGS_MOVE_TIME] - cv_t; // at start of cv 2
+  move_point[LEGS_MOVE_CV2][LEGS_MOVE_DIST] = move_point[LEGS_MOVE_DEC2][LEGS_MOVE_DIST] + cv_d; // at start of cv 2
+  move_point[LEGS_MOVE_ACC2][LEGS_MOVE_TIME] = move_point[LEGS_MOVE_CV2][LEGS_MOVE_TIME] - acc_t; // at start of acc 2
+  move_point[LEGS_MOVE_ACC2][LEGS_MOVE_DIST] = move_point[LEGS_MOVE_CV2][LEGS_MOVE_DIST] + acc_d; // at start of acc 2
+  if(local_debug){
+    DEBUG_INDENT(indent);
+    DEBUG_PRINTLN("End legs_move_point_for_updn");
+  }
+} // end legs_move_point_for_updn
 
 
 //========================================================
@@ -678,6 +584,7 @@ void legs_move_point_scale_a_max(float parameters[LEGS_PARAM_NUM], float move_po
   const char term_lt_zero[] = "term less than zero";
   const char time_le_zero[] = "time less than or equal to zero";
 
+  static const boolean local_debug_1 = false;
   static const boolean local_debug = true;
   if(local_debug){
     DEBUG_INDENT(indent);
@@ -710,12 +617,12 @@ void legs_move_point_scale_a_max(float parameters[LEGS_PARAM_NUM], float move_po
   if(abs(term) < COM_ZERO) term = 0.0; // in case term is close to zero, make it zero
   if(term < 0.0) com_err_msg(routine, term_lt_zero); // error!
   
-  if(local_debug){
+  if(local_debug_1){
     DEBUG_INDENT(indent+1);
     DEBUG_PRINTF(">>>> term is: %7.2f\n", term);
   }
   float sqrt_term = sqrt(term); // sqrt(b^2-4*a*c)
-  if(local_debug){
+  if(local_debug_1){
     DEBUG_INDENT(indent+1);
     DEBUG_PRINTF(">>>> sqrt_term is: %7.2f\n", sqrt_term);
   }
@@ -726,7 +633,7 @@ void legs_move_point_scale_a_max(float parameters[LEGS_PARAM_NUM], float move_po
   } else {
     a_max = a_max_minus / (2.0 * a);
   }
-  if(local_debug){
+  if(local_debug_1){
     DEBUG_INDENT(indent+1);
     DEBUG_PRINTF(">>>> a_max is: %7.2f\n", a_max);
   }

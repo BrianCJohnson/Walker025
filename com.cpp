@@ -39,7 +39,7 @@ void com_free_mem(void){
 //========================================================
 void com_indent(uint8_t indent){
   for(uint8_t i=0; i<indent; i++){
-    Serial.print("|  ");  
+    DEBUG_PRINT("|  ");  
   }
 } // end com_indent
 

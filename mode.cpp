@@ -80,6 +80,7 @@ void mode_initialize_parts(uint8_t indent){
     }     
   }
   if (local_debug){
+    mode_print_parts_xyz(indent+1);
     DEBUG_INDENT(indent);
     DEBUG_PRINTLN("End mode_initialize_parts");
   }
@@ -121,8 +122,7 @@ void mode_create_sequences(uint8_t indent) {
 
   if (local_debug){
     DEBUG_INDENT(indent+1);
-    DEBUG_PRINT("BZNOM: ");
-    DEBUG_PRINTF("%7.2f\n", BZNOM);
+    DEBUG_PRINTF("BZNOM: %7.2f, BZLOW: %7.2f, BZHAF: %7.2f, \n", BZNOM, BZLOW, BZHAF);
   }
 
   // the maximum stride, M_STD = 2.0 * (F_RDY - F_RAD), the maximum half stride, MHSTD = F_RDY - F_RAD
@@ -408,11 +408,24 @@ void mode_check_new_mode(uint8_t indent) {
     DEBUG_PRINT("mode: ");
     DEBUG_PRINT(MODE_NAME[mode_mode_phase_get().mode]);
     DEBUG_PRINT(", direction: ");
-    DEBUG_PRINT(MODE_DIR_NAME[mode_mode_phase_get().direction]);
+    DEBUG_PRINTLN(MODE_DIR_NAME[mode_mode_phase_get().direction]);
+    mode_print_parts_xyz(indent+1);
+    mode_print_parts_beg_xyz(indent+1);
     DEBUG_INDENT(indent);
     DEBUG_PRINTLN("End mode_check_new_mode");
   }
 } // end mode_check_new_mode
+
+
+//========================================================
+// mode_print_current_time
+//========================================================
+void mode_print_current_time(uint8_t indent){
+  uint32_t start_time = mode_phase.start_time;
+  float current_time = float(millis()-start_time)/1000.0; // get float current_time = time since the start of this phase in seconds
+  com_indent(indent);
+  DEBUG_PRINTF("current_time: %1.2f\n", current_time);
+} // end mode_print_current_time
 
 
 //========================================================
@@ -445,6 +458,8 @@ void mode_execute_seq(uint8_t indent){
     DEBUG_PRINT(MODE_PART_NAME[part0_id]);
     DEBUG_PRINT(", part1: ");
     DEBUG_PRINTLN(MODE_PART_NAME[part1_id]);
+    mode_print_current_time(indent+1);
+    mode_print_parts_xyz(indent+1);
   }
   // update parts
   float current_time = float(millis()-start_time)/1000.0; // get float current_time = time since the start of this phase in seconds
@@ -632,6 +647,7 @@ void mode_update_move_part_data(uint8_t new_mode, uint8_t new_phase, uint8_t ind
     DEBUG_INDENT(indent);
     DEBUG_PRINTF("Beg mode_update_move_part_data, new_mode: %s", MODE_NAME[new_mode].c_str());
     DEBUG_PRINTF(", new_phase: %u\n", new_phase);
+    mode_print_current_time(indent+1);
   }
 
 //  static const float v_max = 40.0; // ?? start out slow for testing
@@ -661,24 +677,24 @@ void mode_update_move_part_data(uint8_t new_mode, uint8_t new_phase, uint8_t ind
         DEBUG_PRINTF(",  part: %s\n", MODE_PART_NAME[part_i].c_str());
       }
       for(uint8_t coor=0; coor<XYZ; coor++){
-//        if(local_debug){
-//          DEBUG_INDENT(indent+1);
-//          DEBUG_PRINTF("coor: %u", coor);
-//          DEBUG_PRINTF(", next_move_seq_phase.part[seq_part_i].d[coor]: %7.2f", next_move_seq_phase.part[seq_part_i].d[coor]); // amount to move this part, either absolute or relative
-//          DEBUG_PRINTF(", move_part_xyz[part_i][coor]: %7.2f\n", move_part_xyz[part_i][coor]); // current coordinate of part
-//        }
+        if(local_debug){
+          DEBUG_INDENT(indent+1);
+          DEBUG_PRINTF("coor: %u", coor);
+          DEBUG_PRINTF(", next_move_seq_phase.part[seq_part_i].d[coor]: %7.2f", next_move_seq_phase.part[seq_part_i].d[coor]); // amount to move this part, either absolute or relative
+          DEBUG_PRINTF(", move_part_xyz[part_i][coor]: %7.2f\n", move_part_xyz[part_i][coor]); // current coordinate of part
+        }
         if((part_i != MODE_PART_BODY) && (coor == zi)){
           // part is a leg and Z coor
           move_part_parameters[seq_part_i][coor][LEGS_PARAM_DIST] = next_move_seq_phase.part[seq_part_i].d[coor]; // this is just the lift amount for z
         } else {
           // else (the part is a body) or (part is a leg and we're looking at XY coor)
           move_part_parameters[seq_part_i][coor][LEGS_PARAM_DIST] = next_move_seq_phase.part[seq_part_i].d[coor] - move_part_xyz[part_i][coor]; // convert the absolute position of d[XY] to a distance = absolute - current
-//          if(local_debug){
-//            DEBUG_INDENT(indent+1);
-//            DEBUG_PRINT("move_part_xyz[part_i][coor]: %7.2f\n", move_part_xyz[part_i][coor]); // the current coordinate of the part
-//            DEBUG_INDENT(indent+1);
-//            DEBUG_PRINT("move_part_parameters[seq_part_i][coor][LEGS_PARAM_DIST]: %7.2f\n", move_part_parameters[seq_part_i][coor][LEGS_PARAM_DIST]); // verify that we've set the DIST correctly
-//          }
+          if(local_debug){
+            DEBUG_INDENT(indent+1);
+            DEBUG_PRINTF("move_part_xyz[part_i][coor]: %7.2f\n", move_part_xyz[part_i][coor]); // the current coordinate of the part
+            DEBUG_INDENT(indent+1);
+            DEBUG_PRINTF("move_part_parameters[seq_part_i][coor][LEGS_PARAM_DIST]: %7.2f\n", move_part_parameters[seq_part_i][coor][LEGS_PARAM_DIST]); // verify that we've set the DIST correctly
+          }
         }
         move_part_parameters[seq_part_i][coor][LEGS_PARAM_DIR] = 1.0; // will be changed by legs_coor_move_points() if distance is negative
         if((part_i != MODE_PART_BODY) && (coor == zi)){
@@ -746,18 +762,22 @@ void mode_update_move_part_data(uint8_t new_mode, uint8_t new_phase, uint8_t ind
       }
       DEBUG_PRINTLN();
     }
+    mode_print_parts_xyz(indent+1);
+    mode_print_parts_beg_xyz(indent+1);
     mode_print_move_part_parameters(indent+1);
+    mode_print_move_part_points(indent+1);
   }
-
 
   if(moving_parts){
     // do the mode_update_part_activity_seq_part at the end because we needed to use the old values up above
+    mode_update_part_beg_xyz(indent+1); // update the move_part_beg_xyz[MODE_PART_NUM][XYZ]. NOTE: this must be done before the next line as it uses the old part data
     mode_update_part_activity_seq_part(next_move_seq_phase, indent+1); // update the move_part_activity_type[MODE_PART_NUM] and move_part_seq_part[MODE_PART_NUM]
-    mode_update_part_beg_xyz(indent+1); // update the move_part_beg_xyz[MODE_PART_NUM][XYZ]
   }
 
   if (local_debug){
     if(moving_parts){
+      mode_print_parts_xyz(indent+1);
+      mode_print_parts_beg_xyz(indent+1);
       mode_print_move_part_parameters(indent+1);
       mode_print_move_part_points(indent+1);
     }
@@ -780,6 +800,7 @@ void mode_execute_move(float current_time, mode_seq_t mode_seq_phase, boolean *m
     DEBUG_PRINTF("%7.2f", current_time);
     DEBUG_PRINT(", mode_seq_phase description: ");
     DEBUG_PRINTLN(mode_seq_phase.phase_name);
+    mode_print_current_time(indent+1);
   }
   
 //  static const uint8_t xi = 0;
@@ -792,7 +813,7 @@ void mode_execute_move(float current_time, mode_seq_t mode_seq_phase, boolean *m
     mode_print_move_part_parameters(indent+1);
     mode_print_move_part_points(indent+1);
   }
-  if(local_debug && false){
+  if(local_debug && true){
     mode_print_parts_xyz(indent+1);
     mode_print_parts_beg_xyz(indent+1);
   }
@@ -840,12 +861,12 @@ void mode_execute_move(float current_time, mode_seq_t mode_seq_phase, boolean *m
 
   // now let's update the legs in the list of all possible parts
   for(uint8_t part=0; part<MODE_PART_NUM; part++){
-    DEBUG_PRINT("part: ");
-    DEBUG_PRINT(part);
-    DEBUG_PRINT(", activity type: ");
-    DEBUG_PRINT(move_part_activity_type[part]);
-    DEBUG_PRINT(", activity name: ");
-    DEBUG_PRINTLN(MODE_PART_ACTIVITY_TYPE_NAME[move_part_activity_type[part]]);
+//    DEBUG_PRINT("part: ");
+//    DEBUG_PRINT(part);
+//    DEBUG_PRINT(", activity type: ");
+//    DEBUG_PRINT(move_part_activity_type[part]);
+//    DEBUG_PRINT(", activity name: ");
+//    DEBUG_PRINTLN(MODE_PART_ACTIVITY_TYPE_NAME[move_part_activity_type[part]]);
     switch(move_part_activity_type[part]){
       case MODE_PART_TYPE_ACTIVE_LEG:
         // if the part is an ACTIVE_LEG, update the coordinates
@@ -863,12 +884,12 @@ void mode_execute_move(float current_time, mode_seq_t mode_seq_phase, boolean *m
         for(uint8_t coor=0; coor<XYZ; coor++){
           move_part_xyz[part][coor] = move_part_beg_xyz[part][coor] - body_move_position[coor];
           //com_free_mem();
-          DEBUG_PRINT("move_part_beg_xyz[part][coor] (");
-          DEBUG_PRINTF("%7.2f", move_part_beg_xyz[part][coor]);
-          DEBUG_PRINT(") - body_move_position[coor] (");
-          DEBUG_PRINTF("%7.2f", body_move_position[coor]);
-          DEBUG_PRINT(") = move_part_xyz[part][coor] (");
-          DEBUG_PRINTF("%7.2f)\n", move_part_xyz[part][coor]);
+//          DEBUG_PRINT("move_part_beg_xyz[part][coor] (");
+//          DEBUG_PRINTF("%7.2f", move_part_beg_xyz[part][coor]);
+//          DEBUG_PRINT(") - body_move_position[coor] (");
+//          DEBUG_PRINTF("%7.2f", body_move_position[coor]);
+//          DEBUG_PRINT(") = move_part_xyz[part][coor] (");
+//          DEBUG_PRINTF("%7.2f)\n", move_part_xyz[part][coor]);
         }
         break;
       case MODE_PART_TYPE_STATIC_BODY:
@@ -876,30 +897,29 @@ void mode_execute_move(float current_time, mode_seq_t mode_seq_phase, boolean *m
         // don't do anything, we've already handled the body
         break;
     }
-    mode_print_parts_xyz(indent+1);
+//    mode_print_parts_xyz(indent+1);
   }
 
-  DEBUG_PRINTLN("mode_execute_move done with parts");
   float angle_phk[NUM_LEGS][NUM_JOINTS_LEG];
   legs_angles(move_part_xyz, angle_phk);
   servo_set_angles(angle_phk);
-  
   *move_done = (current_time >= move_part_points[0][0][0][0]) && (current_time >= move_part_points[1][0][0][0]);
 
   *zero_vel = true; // place holder!!!
   if (local_debug){
     mode_print_parts_xyz(indent+1);
+    mode_print_move_part_points(indent+1);
     //mode_print_parts_beg_xyz(indent+1);
     DEBUG_INDENT(indent+1);
     if(current_time >= move_part_points[0][0][0][0]){
-      DEBUG_PRINT("current_time >= move_part_points[0][0][0][0]");
+      DEBUG_PRINTF("current_time: %7.2f >= move_part_points[0][0][0][0]: %7.2f", current_time, move_part_points[0][0][0][0]);
     } else {
-      DEBUG_PRINT("current_time < move_part_points[0][0][0][0]");      
+      DEBUG_PRINTF("current_time: %7.2f < move_part_points[0][0][0][0]: %7.2f", current_time, move_part_points[0][0][0][0]);      
     }
     if(current_time >= move_part_points[1][0][0][0]){
-      DEBUG_PRINT(", current_time >= move_part_points[1][0][0][0]");
+      DEBUG_PRINTF(", current_time: %7.2f >= move_part_points[1][0][0][0]: %7.2f", current_time, move_part_points[1][0][0][0]);
     } else {
-      DEBUG_PRINT(", current_time < move_part_points[1][0][0][0]");
+      DEBUG_PRINTF(", current_time: %7.2f < move_part_points[1][0][0][0]: %7.2f", current_time, move_part_points[1][0][0][0]);
     }
     DEBUG_PRINT(", move_done: ");
     DEBUG_PRINTLN(*move_done);
@@ -920,6 +940,7 @@ void mode_update_part_activity_seq_part(mode_seq_t next_move_seq_phase, uint8_t 
   if (local_debug){
     DEBUG_INDENT(indent);
     DEBUG_PRINTLN("Beg mode_update_part_activity_seq_part");
+    mode_print_current_time(indent+1);
   }
   // set all parts to their activity type for this new phase, first assume they're not active
   for(uint8_t part_i=0; part_i<MODE_PART_NUM; part_i++){
@@ -1112,8 +1133,12 @@ void mode_set(uint8_t new_mode, uint8_t indent){
     DEBUG_INDENT(indent);
     DEBUG_PRINT("Beg mode_set, new_mode: ");
     DEBUG_PRINTLN(MODE_NAME[new_mode]);
+    mode_print_current_time(indent+1);
   }
 
+  // update the start_time
+  mode_phase.start_time = millis();
+  
   // update mode_phase.alternate
   if(mode_phase.alternate == 0){
     mode_phase.alternate = 1;

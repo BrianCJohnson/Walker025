@@ -94,6 +94,7 @@
   void legs_print_parameters(float parameters[XYZ][LEGS_PARAM_NUM], uint8_t indent);
   void legs_print_move_points(float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent);
   void legs_coor_move_points(float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent);
+  void legs_move_point_for_updn(float move_point[LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent);
   void legs_move_point_scale_a_max(float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], float t, uint8_t indent);
   void legs_move_point(float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], uint8_t indent);
   void legs_angles(float foot_xyz[NUM_LEGS][XYZ], float angle_phk[NUM_LEGS][NUM_JOINTS_LEG]);

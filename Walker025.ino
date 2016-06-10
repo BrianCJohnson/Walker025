@@ -44,12 +44,12 @@ void setup(){
     DEBUG_PRINTLN("Beg setup");
   }
   //delay(1000);
-  mode_setup(indent);
   sbus_setup();
   servo_setup();
 //  body_setup();
   legs_setup(indent+1);
 //  legs_position_tests();
+  mode_setup(indent);
   last_time = millis();
   if(local_debug){
     DEBUG_INDENT(indent);

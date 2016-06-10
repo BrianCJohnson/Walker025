@@ -121,6 +121,7 @@
   float mode_calc_step_time(float step_x, float step_y, float lift_height, uint8_t indent);
   void mode_update(uint8_t indent);
   void mode_check_new_mode(uint8_t indent);
+  void mode_print_current_time(uint8_t indent);
   void mode_execute_seq(uint8_t indent);
   void mode_print_move_part_points(uint8_t indent);
   void mode_print_move_part_parameters(uint8_t indent);
