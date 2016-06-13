@@ -95,12 +95,12 @@
   const static uint8_t MODE_DIR_NUM = 2;
   const String MODE_DIR_NAME[MODE_DIR_NUM] = {"PLUS", "MINUS"};
   
-  const static uint8_t MODE_PART_TYPE_SUPPORT_LEG = 0;
-  const static uint8_t MODE_PART_TYPE_ACTIVE_LEG = 1;
-  const static uint8_t MODE_PART_TYPE_STATIC_BODY = 2;
-  const static uint8_t MODE_PART_TYPE_ACTIVE_BODY = 3;
-  const static uint8_t MODE_PART_TYPE_NUM = 4;
-  const String MODE_PART_ACTIVITY_TYPE_NAME[MODE_PART_TYPE_NUM] = {"SUPPORT_LEG", "ACTIVE_LEG", "STATIC_BODY", "ACTIVE_BODY"};
+  const static uint8_t MODE_PART_ACTIVITY_SUPPORT_LEG = 0;
+  const static uint8_t MODE_PART_ACTIVITY_ACTIVE_LEG = 1;
+  const static uint8_t MODE_PART_ACTIVITY_STATIC_BODY = 2;
+  const static uint8_t MODE_PART_ACTIVITY_ACTIVE_BODY = 3;
+  const static uint8_t MODE_PART_ACTIVITY_NUM = 4;
+  const String MODE_PART_ACTIVITY_NAME[MODE_PART_ACTIVITY_NUM] = {"SUPPORT_LEG", "ACTIVE_LEG", "STATIC_BODY", "ACTIVE_BODY"};
 
   const static uint8_t MODE_PART_LEG0 = 0;
   const static uint8_t MODE_PART_LEG1 = 1;
@@ -124,15 +124,14 @@
   void mode_print_current_time(uint8_t indent);
   void mode_execute_seq(uint8_t indent);
   void mode_print_move_part_points(uint8_t indent);
-  void mode_print_move_part_parameters(uint8_t indent);
+  void mode_print_part_parameters(const char *text, float part_parameters[MODE_SEQ_PART_NUM][XYZ][LEGS_PARAM_NUM], uint8_t indent);
+  void mode_print_parts_xyz(const char *text, float part_xyz[MODE_PART_NUM][XYZ], uint8_t indent);
+  void mode_print_parts_activity_seq_part(const char *text, uint8_t part_activity[MODE_PART_NUM], uint8_t part_seq_part[MODE_PART_NUM], uint8_t indent);
   void mode_update_move_part_data(uint8_t new_mode, uint8_t new_phase, uint8_t indent);
-  //void mode_execute_part(float current_time, mode_seq_part_t part, boolean move_done, boolean zero_vel, uint8_t indent);
   void mode_execute_move(float current_time, mode_seq_t mode_seq_phase, boolean *move_done, boolean *zero_vel, uint8_t indent);
-  void mode_update_part_activity_seq_part(mode_seq_t next_move_seq_phase, uint8_t indent); // update the move_part_activity_type[MODE_PART_NUM] and move_part_seq_part[MODE_PART_NUM]
-  void mode_update_part_beg_xyz(uint8_t indent);
-  void mode_print_part_v_old(uint8_t indent);
-  void mode_print_parts_xyz(uint8_t indent);
-  void mode_print_parts_beg_xyz(uint8_t indent);
+  void mode_create_next_part_parameters(mode_seq_t next_seq_phase, float next_part_beg_xyz[MODE_PART_NUM][XYZ], float part_parameters[MODE_SEQ_PART_NUM][XYZ][LEGS_PARAM_NUM], uint8_t part_activity_type[MODE_PART_NUM], uint8_t part_seq_part[MODE_PART_NUM], float next_part_parameters[MODE_SEQ_PART_NUM][XYZ][LEGS_PARAM_NUM], uint8_t indent);
+  void mode_create_next_part_activity_seq_part(mode_seq_t next_seq_phase, uint8_t next_part_activity[MODE_PART_NUM], uint8_t next_part_seq_part[MODE_PART_NUM], uint8_t indent);
+  void mode_create_next_part_beg_xyz(mode_seq_t next_seq_phase, float part_parameters[MODE_SEQ_PART_NUM][XYZ][LEGS_PARAM_NUM], uint8_t part_activity_type[MODE_PART_NUM], uint8_t part_seq_part[MODE_PART_NUM], float part_beg_xyz[MODE_PART_NUM][XYZ], float next_part_beg_xyz[MODE_PART_NUM][XYZ], uint8_t indent);
   void mode_set_folded(uint8_t indent);
   void mode_set_ready(uint8_t indent);
   void mode_set_dir(uint8_t newdir, uint8_t indent);

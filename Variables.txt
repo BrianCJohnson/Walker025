@@ -1,0 +1,44 @@
+Globals defined in mode:
+
+  mode_phase_t mode_phase; // mode and phase
+  mode_values_t mode_values;  // commands from radio [fold, vx, vy, vt, height, angle]
+  mode_seq_t mode_seq[MODE_NUM][MODE_PHASE_MAX_NUM]; // mode phase sequences (end of move xyz position and velocities)
+  float move_part_points[MODE_SEQ_PART_NUM][XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM]; // move points for moving parts
+  float move_part_parameters[MODE_SEQ_PART_NUM][XYZ][LEGS_PARAM_NUM]; // parameters for each of the part move
+  float move_part_xyz[MODE_PART_NUM][XYZ]; // xyz coordinates of each part (each leg and the body)
+  float move_part_beg_xyz[MODE_PART_NUM][XYZ]; // xyz coordinates of each part at the beginning of the current move seq (each leg and the body)
+  uint8_t move_part_activity_type[MODE_PART_NUM]; // updated between move sequences, indicates the activity and type of each part (the part type: MODE_PART_TYPE_ & {"SUPPORT_LEG", "ACTIVE_LEG", "STATIC_BODY", "ACTIVE_BODY"})
+  uint8_t move_part_seq_part[MODE_PART_NUM]; // updated between move sequences, indicates which seq_part (if any) is associated with the part
+
+mode_seq coordinate explanation:
+  // body positions are relative to the body position at the start of the move for x and y, but z is absolute
+  // active leg positions x, y are relative to the body position at the start of the mode, but z is just used for the leg lift amount
+
+Globals defined in legs
+  LEGS_PARAM_NUM(=7): LEGS_PARAM_DIST, _DIR, _UPDN, _V_MAX, _A_MAX, _V_BEG, _V_END
+  LEGS_MOVE_POINT_NUM(=7): LEGS_MOVE_END, _DEC2, _CV2, _ACC2, _WAIT, _DEC1, _CV1
+
+XYZ Coordinates
+	Body X, Y:	absolute positions in world
+	Body Z: 	absolute height above local nominal ground
+	Leg X, Y, Z: 	position of foot relative to body center
+
+Move Distances (for active parts)
+	Body X, Y:	(distance)	amount to move in X, Y relative to body center at start of move
+	Body Z:		(position)	absolute height above local nominal ground
+	Leg X, Y:	(position)	position of foot relative to body center at the end of the move
+	Leg Z if updn: 	(distance)	amount to raise and lower foot for step (from current LegZ)
+	Leg Z if !updn:	(position)	position of foot relative to body center
+
+XYZ Coordinates when move is complete
+	bodyX = bodyX + bodyDistX
+	bodyY = bodyY + bodyDistY
+	bodyZ = bodyDistZ
+	supportLegX = supportLegX - bodyDistX
+	supportLegY = supportLegY - bodyDistY
+	supportLegZ = bodyDistZ
+	activeLegX = legDistX
+	activeLegY = legDistY
+	activeLegZ = legDistZ if !updn
+	activeLegZ = activeLegZ if updn
+

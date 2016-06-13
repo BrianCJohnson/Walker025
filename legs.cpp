@@ -385,7 +385,7 @@ void legs_print_parameters(float parameters[XYZ][LEGS_PARAM_NUM], uint8_t indent
   DEBUG_INDENT(indent+1);
   DEBUG_PRINT("\t");
   for(uint8_t param=0; param<LEGS_PARAM_NUM; param++){
-    DEBUG_PRINTF("  %s\t",LEGS_PARAM_NAME[param].c_str());
+    DEBUG_PRINTF("  %s\t", LEGS_PARAM_NAME[param].c_str());
   }
   DEBUG_PRINTLN();
   for(uint8_t coor=0; coor<XYZ; coor++){

@@ -39,9 +39,33 @@ void com_free_mem(void){
 //========================================================
 void com_indent(uint8_t indent){
   for(uint8_t i=0; i<indent; i++){
-    DEBUG_PRINT("|  ");  
+    Serial.print("|  ");  
   }
 } // end com_indent
+
+
+//========================================================
+// com_print_beg()
+//========================================================
+void com_print_beg(const char routine[], uint8_t indent){
+  com_indent(indent);
+  Serial.printf("Beg %s", routine);
+//  Serial.print("Beg ");
+//  Serial.print(routine);
+  // print time?
+} // com_print_beg
+
+
+//========================================================
+// com_print_end()
+//========================================================
+void com_print_end(const char routine[], uint8_t indent){
+  com_indent(indent);
+  Serial.printf("End %s", routine);
+//  Serial.print("End ");
+//  Serial.print(routine);
+  // print time?
+} // com_print_end
 
 
 //========================================================
@@ -71,7 +95,7 @@ void com_sign_mag(float number, int8_t *sign, float *mag){
 // com_err_msg_int
 //========================================================
 void com_err_msg_int(const char routine[], const char err_msg[]){
-  Serial.print("COM_ERR_MSG: routine: ");
+  Serial.print("COM_ERR_MSG: routine:");
   Serial.print(routine);
   Serial.print(", error: ");
   Serial.print(err_msg);
