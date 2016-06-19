@@ -16,6 +16,8 @@
   };
   typedef struct mode_phase_s mode_phase_t;
 
+  const static float LEGS_MIN_MOVE_TIME = 0.1; // set minimum move time to 1/10 sec
+
   // values of robot leg geometry
   const static float LEGS_CENTER_2_PIVOT_XY = 75.0;
   const static float LEGS_PIVOT_2_HIP = 45.5;
@@ -52,6 +54,7 @@
   const static uint8_t LEGS_MOVE_CV1 = 6; // start of the constant velocity
   const static uint8_t LEGS_MOVE_POINT_NUM = 7;
   const static String LEGS_MOVE_NAME[LEGS_MOVE_POINT_NUM] = {"_END", "DEC2", "_CV2", "ACC2", "WAIT", "DEC1", "_CV1"};
+  
   const static uint8_t LEGS_MOVE_TIME = 0;
   const static uint8_t LEGS_MOVE_DIST = 1;
   const static uint8_t LEGS_MOVE_TD_NUM = 2;
@@ -84,20 +87,20 @@
                                          {40.0, 20.0},
                                          {40.0, 20.0}}; // linear velocity and acceleration max
 
-  void legs_setup(uint8_t indent);
-  void legs_print_values(String value_name, float value[NUM_LEGS][XYZ], uint8_t indent);
-  void legs_compute_retracted_and_ready(uint8_t indent);
+  void legs_setup(int8_t indent);
+  void legs_print_values(String value_name, float value[NUM_LEGS][XYZ], int8_t indent);
+  void legs_compute_retracted_and_ready(int8_t indent);
 //  void legs_update(void);
   void legs_position_tests(void);
-  void legs_position(float the_time, float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], float legs_position[3], uint8_t indent);
-  float legs_distance(float the_time, float parameters[LEGS_PARAM_NUM], float move_point[][LEGS_MOVE_TD_NUM], uint8_t indent);
-  void legs_print_parameters(float parameters[XYZ][LEGS_PARAM_NUM], uint8_t indent);
-  void legs_print_move_points(float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent);
-  void legs_coor_move_points(float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent);
-  void legs_move_point_for_updn(float move_point[LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent);
-  void legs_move_point_scale_a_max(float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], float t, uint8_t indent);
-  void legs_move_point(float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], uint8_t indent);
-  void legs_angles(float foot_xyz[NUM_LEGS][XYZ], float angle_phk[NUM_LEGS][NUM_JOINTS_LEG]);
+  void legs_position(float the_time, float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], float legs_position[3], int8_t indent);
+  float legs_distance(float the_time, float parameters[LEGS_PARAM_NUM], float move_point[][LEGS_MOVE_TD_NUM], int8_t indent);
+  void legs_print_parameters(float parameters[XYZ][LEGS_PARAM_NUM], int8_t indent);
+  void legs_print_move_points(float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], int8_t indent);
+  void legs_coor_move_points(float &target_time, float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], int8_t indent);
+  void legs_move_point(float &target_time, float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], int8_t indent);
+  void legs_move_point_for_updn(float move_point[LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], int8_t indent);
+  void legs_move_point_scale_a_max(float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], float t, int8_t indent);
+  void legs_angles(float foot_xyz[NUM_LEGS][XYZ], float angle_phk[NUM_LEGS][NUM_JOINTS_LEG], int8_t indent);
   void leg_angles(uint8_t leg, float foot_xyz[XYZ], float angle[NUM_JOINTS_LEG]);
 //  boolean legs_change_sequence(uint8_t new_sequence); // change sequence
 //  uint8_t legs_sequence(void); // returns the current legs_sequence

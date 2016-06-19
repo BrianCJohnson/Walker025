@@ -43,9 +43,10 @@
 //  uint8_t my_mode;
 
   void com_free_mem(void);
-  void com_indent(uint8_t indent);
-  void com_print_beg(const char routine[], uint8_t indent);
-  void com_print_end(const char routine[], uint8_t indent);
+  void com_indent(int8_t indent);
+  void com_print_beg(const char *routine, int8_t indent);
+  void com_print_beg2(const char *routine, const char *text, int8_t indent);
+  void com_print_end(const char *routine, int8_t indent);
   void com_sign_mag(float number, int8_t *sign, float *mag);
   void com_err_msg_int(const char routine[], const char err_msg[]);
   void com_err_msg(const char routine[], const char err_msg[]);

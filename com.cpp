@@ -37,8 +37,8 @@ void com_free_mem(void){
 //========================================================
 // com_indent()
 //========================================================
-void com_indent(uint8_t indent){
-  for(uint8_t i=0; i<indent; i++){
+void com_indent(int8_t indent){
+  for(int8_t i=0; i<indent; i++){
     Serial.print("|  ");  
   }
 } // end com_indent
@@ -47,9 +47,21 @@ void com_indent(uint8_t indent){
 //========================================================
 // com_print_beg()
 //========================================================
-void com_print_beg(const char routine[], uint8_t indent){
+void com_print_beg(const char *routine, int8_t indent){
   com_indent(indent);
-  Serial.printf("Beg %s", routine);
+  Serial.printf("Beg %s, millis(): %d\n", routine, millis());
+//  Serial.print("Beg ");
+//  Serial.print(routine);
+  // print time?
+} // com_print_beg
+
+
+//========================================================
+// com_print_beg2()
+//========================================================
+void com_print_beg2(const char *routine, const char *text, int8_t indent){
+  com_indent(indent);
+  Serial.printf("Beg %s: %s, millis(): %d\n", routine, text, millis());
 //  Serial.print("Beg ");
 //  Serial.print(routine);
   // print time?
@@ -59,9 +71,9 @@ void com_print_beg(const char routine[], uint8_t indent){
 //========================================================
 // com_print_end()
 //========================================================
-void com_print_end(const char routine[], uint8_t indent){
+void com_print_end(const char *routine, int8_t indent){
   com_indent(indent);
-  Serial.printf("End %s", routine);
+  Serial.printf("End %s, millis(): %d\n", routine, millis());
 //  Serial.print("End ");
 //  Serial.print(routine);
   // print time?

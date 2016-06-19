@@ -9,7 +9,7 @@
 #include "legs.h"
 #include "servo.h" // to call servo_set_angles 
 #include "debug.h"
-//#include "mode.h" // to call mode_print_move_part_points(uint8_t indent)
+//#include "mode.h" // to call mode_print_move_part_points(int8_t indent)
 
 static float legs_foot_xyz_retracted[NUM_LEGS][XYZ]; // calculated at setup from above
 static float legs_foot_xyz_ready[NUM_LEGS][XYZ]; // calculated at setup from above
@@ -23,22 +23,11 @@ float legs_angle[NUM_LEGS][NUM_JOINTS_LEG]; // joint angles of each foot, in rad
 
 //========================================================
 // legs setup
-
 //========================================================
-void legs_setup(uint8_t indent){
-  const boolean local_debug = true;
-  if(local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("Beg legs_setup");
-  }
-  //legs_are_folded = false; // don't know the state
-  //legs_are_unfolded = false; // don't know the state
-//  for (uint8_t leg = 0; leg < NUM_LEGS; leg++){
-//    for (uint8_t joint = 0; joint < NUM_JOINTS_LEG; joint++){
-//      // set each to their max angle (folded)
-//      legs_angle[leg][joint] = SERVO_MAX_ANGLE[leg][joint];
-//    }
-//  }
+void legs_setup(int8_t indent){
+  const static char *routine = "legs_setup";
+  LOCAL_DEBUG_ENABLED
+  if (local_debug) DEBUG_PRINT_BEG(routine, indent);
   legs_compute_retracted_and_ready(indent+1);
   for(uint8_t leg=0; leg<NUM_LEGS; leg++){
     for(uint8_t coor=0; coor<XYZ; coor++){
@@ -47,23 +36,17 @@ void legs_setup(uint8_t indent){
     }
   }
   if(local_debug) legs_print_values("legs_xyz", legs_xyz, indent+1);
-  legs_angles(legs_xyz, legs_angle); // update leg angles
+  legs_angles(legs_xyz, legs_angle, indent+1); // update leg angles
   if(local_debug) legs_print_values("legs_angle", legs_angle, indent+1);
   servo_set_angles(legs_angle); // update servos
-//  legs_are_folded = true; // now we know the state
-//  legs_are_unfolded = false; // now we know the state
-//  legs_active_sequence = LEGS_SEQ_FOLDED; // not in any sequence yet
-  if(local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("End legs_setup");
-  }
+  if (local_debug) DEBUG_PRINT_END(routine, indent);
 } // end legs_setup
 
 
 //========================================================
 // legs_print_values
 //========================================================
-void legs_print_values(String value_name, float value[NUM_LEGS][XYZ], uint8_t indent){
+void legs_print_values(String value_name, float value[NUM_LEGS][XYZ], int8_t indent){
   com_indent(indent);
   Serial.print("Beg legs_print_values, ");
   Serial.println(value_name);
@@ -82,8 +65,10 @@ void legs_print_values(String value_name, float value[NUM_LEGS][XYZ], uint8_t in
 //========================================================
 // legs_compute_retracted_and_ready
 //========================================================
-void legs_compute_retracted_and_ready(uint8_t indent){
-  const boolean local_debug = false;
+void legs_compute_retracted_and_ready(int8_t indent){
+//  const boolean local_debug = false;
+//  if(!local_debug) indent = -1;
+  LOCAL_DEBUG_DISABLED
   if(local_debug) DEBUG_PRINTLN("Beg legs_compute_retracted_and_ready()");
   static const uint8_t xi = 0;
   static const uint8_t yi = 1;
@@ -132,11 +117,10 @@ void legs_compute_retracted_and_ready(uint8_t indent){
 // legs position_tests
 // tests:
 //   void legs_position(float the_time, float v_max[XYZ], float a_max[XYZ], int8_t dir[XYZ], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], float legs_position[3]){
-//   void legs_coor_move_points(float move_xyz[XYZ], float v_max[XYZ], float a_max[XYZ], int8_t dir[XYZ], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM]){
+//   void legs_coor_move_points(float target_time, float move_xyz[XYZ], float v_max[XYZ], float a_max[XYZ], int8_t dir[XYZ], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM]){
 //   float legs_distance(float the_time, float v_max, float a_max, float move_point[3][LEGS_MOVE_TD_NUM]){
-//   void legs_move_point(float v_max, float a_max, float distance, float move_point[3][LEGS_MOVE_TD_NUM], uint8_t indent){
 //========================================================
-void legs_position_tests(uint8_t indent){
+void legs_position_tests(int8_t indent){
   com_indent(indent);
   Serial.println("In legs_position_tests");
   //     LEGS_PARAM_NAME[LEGS_PARAM_NUM] = {"DIST", "DIR", "UPDN", "V_MAX", "A_MAX", "V_BEG", "V_END"};
@@ -156,7 +140,8 @@ void legs_position_tests(uint8_t indent){
     Serial.println();
   }
   float move_points[XYZ][LEGS_MOVE_POINT_NUM][2];
-  legs_coor_move_points(parameters, move_points, indent+1);
+  float target_time = -1.0;
+  legs_coor_move_points(target_time, parameters, move_points, indent+1);
   Serial.println("  after legs_coor_move_points()");
   for(uint8_t param=0; param<LEGS_PARAM_NUM; param++){
     DEBUG_INDENT(indent);
@@ -243,21 +228,22 @@ void legs_position_tests(uint8_t indent){
 //   for z: {{end_time, end_dist}, {dec2_time, dec2_dist}, {cv2_time, cv2_dist}, {acc2_time, acc2_dist}, {wait_time, wait_dist}, {dec1_time, dec1_dist}, {cv1_time, cv1_dist}}
 // remember, distances are alway positive!
 //========================================================
-void legs_position(float the_time, float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], float leg_position[XYZ], uint8_t indent){
+void legs_position(float the_time, float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], float leg_position[XYZ], int8_t indent){
   // get the x and y positions which only acc, optional constant vel, dec
-  static const boolean local_debug = true;
-  if (local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("Beg legs_position");
-  }
+  const static char *routine = "legs_position";
+  LOCAL_DEBUG_ENABLED
+  if (local_debug) DEBUG_PRINT_BEG(routine, indent);
   for (uint8_t coor=0; coor<XYZ; coor++){
     leg_position[coor] = legs_distance(the_time, parameters[coor], move_points[coor], indent+1);
-    if(parameters[coor][LEGS_PARAM_DIR] < 0.0) leg_position[coor] = -leg_position[coor];
+    if(parameters[coor][LEGS_PARAM_DIR] < 0.0){
+      if (local_debug){
+        DEBUG_INDENT(indent+1);
+        DEBUG_PRINTLN("reversing direction");
+      }
+      leg_position[coor] = -leg_position[coor];
+    }
   }
-  if (local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("End legs_position");
-  }
+  if (local_debug) DEBUG_PRINT_END(routine, indent);
 } // end legs_position
 
 
@@ -267,7 +253,8 @@ void legs_position(float the_time, float parameters[XYZ][LEGS_PARAM_NUM], float 
 // and an array of move points {{end_time, end_dist}, {dec_time, dec_dist}, {cv_time, cv_dist}}
 // remember, distances are alway positive!
 //========================================================
-float legs_distance(float the_time, float parameters[LEGS_PARAM_NUM], float move_point[LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent){
+float legs_distance(float the_time, float parameters[LEGS_PARAM_NUM], float move_point[LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], int8_t indent){
+  const static char routine[] = "legs_distance";
   float updn = parameters[LEGS_PARAM_UPDN];
   float v_max = parameters[LEGS_PARAM_V_MAX];
   float a_max = parameters[LEGS_PARAM_A_MAX];
@@ -276,21 +263,18 @@ float legs_distance(float the_time, float parameters[LEGS_PARAM_NUM], float move
   float delta_time;
   float distance;
 
-  static const boolean local_debug = false;
+//  static const boolean local_debug = false;
+//  if(!local_debug) indent = -1;
+  LOCAL_DEBUG_ENABLED
   if (local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINT("Beg legs_distance, the_time: ");
-    DEBUG_PRINTF("%7.2f", the_time);
-    DEBUG_PRINT(", updn: ");
-    DEBUG_PRINTF("%7.2f", updn);
-    DEBUG_PRINT(", v_max: ");
-    DEBUG_PRINTF("%7.2f", v_max);
-    DEBUG_PRINT(", a_max: ");
-    DEBUG_PRINTF("%7.2f", a_max);
-    DEBUG_PRINT(", v_beg: ");
-    DEBUG_PRINTF("%7.2f", v_beg);
-    DEBUG_PRINT(", v_end: ");
-    DEBUG_PRINTF("%7.2f\n", v_end);
+    DEBUG_PRINT_BEG(routine, indent);
+    DEBUG_INDENT(indent+1);
+    DEBUG_PRINTF("the_time: %7.2f", the_time);
+    DEBUG_PRINTF(", updn: %7.2f", updn);
+    DEBUG_PRINTF(", v_max: %7.2f", v_max);
+    DEBUG_PRINTF(", a_max: %7.2f", a_max);
+    DEBUG_PRINTF(", v_beg: %7.2f", v_beg);
+    DEBUG_PRINTF(", v_end: %7.2f\n", v_end);
   }
 
   boolean up_down = updn > 0.0;
@@ -307,18 +291,13 @@ float legs_distance(float the_time, float parameters[LEGS_PARAM_NUM], float move
       if(local_debug) DEBUG_PRINTLN("at 1");
       distance = move_point[LEGS_MOVE_END][LEGS_MOVE_DIST] + (0.5 * a_max * delta_time * delta_time); // ignores non-zero v_end
     } else {
-      if(local_debug) DEBUG_PRINTLN("at 2");
       if(local_debug){
-        DEBUG_PRINT("move_point[LEGS_MOVE_END][LEGS_MOVE_DIST]: ");
-        DEBUG_PRINTF("%7.2f", move_point[LEGS_MOVE_END][LEGS_MOVE_DIST]);
-        DEBUG_PRINT(", delta_time: ");
-        DEBUG_PRINTF("%7.2f", delta_time);
-        DEBUG_PRINT(", v_end: ");
-        DEBUG_PRINTF("%7.2f", v_end);
-        DEBUG_PRINT(", a_max: ");
-        DEBUG_PRINTF("%7.2f", a_max);
-        DEBUG_PRINT(", minus term: ");
-        DEBUG_PRINTF("%7.2f\n", ((delta_time * v_end) + (0.5 * a_max * delta_time * delta_time)));
+        DEBUG_PRINTLN("at 2");
+        DEBUG_PRINTF("move_point[LEGS_MOVE_END][LEGS_MOVE_DIST]: %7.2f", move_point[LEGS_MOVE_END][LEGS_MOVE_DIST]);
+        DEBUG_PRINTF(", delta_time: %7.2f", delta_time);
+        DEBUG_PRINTF(", v_end: %7.2f", v_end);
+        DEBUG_PRINTF(", a_max: %7.2f", a_max);
+        DEBUG_PRINTF(", minus term: %7.2f\n", ((delta_time * v_end) + (0.5 * a_max * delta_time * delta_time)));
       }
       distance = move_point[LEGS_MOVE_END][LEGS_MOVE_DIST] - ((delta_time * v_end) + (0.5 * a_max * delta_time * delta_time)); // handles non-zero v_end
     }
@@ -367,9 +346,9 @@ float legs_distance(float the_time, float parameters[LEGS_PARAM_NUM], float move
     distance = 0.5 * a_max * the_time * the_time;
   }
   if (local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINT("End legs_distance, distance: ");
-    DEBUG_PRINTLN(distance);
+    DEBUG_INDENT(indent+1);
+    DEBUG_PRINTF("distance: %7.2f\n", distance);
+    DEBUG_PRINT_END(routine, indent);
   }
   return distance;
 } // end legs_distance
@@ -378,12 +357,12 @@ float legs_distance(float the_time, float parameters[LEGS_PARAM_NUM], float move
 //========================================================
 // legs_print_parameters
 //========================================================
-void legs_print_parameters(float parameters[XYZ][LEGS_PARAM_NUM], uint8_t indent){
+void legs_print_parameters(float parameters[XYZ][LEGS_PARAM_NUM], int8_t indent){
   String coor_name[XYZ] = {"x:", "y:", "z:"};
   DEBUG_INDENT(indent);
   DEBUG_PRINTLN("Beg legs_print_parameters");
   DEBUG_INDENT(indent+1);
-  DEBUG_PRINT("\t");
+  DEBUG_PRINT("  \t");
   for(uint8_t param=0; param<LEGS_PARAM_NUM; param++){
     DEBUG_PRINTF("  %s\t", LEGS_PARAM_NAME[param].c_str());
   }
@@ -404,7 +383,7 @@ void legs_print_parameters(float parameters[XYZ][LEGS_PARAM_NUM], uint8_t indent
 //========================================================
 // legs_print_move_points
 //========================================================
-void legs_print_move_points(float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent){
+void legs_print_move_points(float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], int8_t indent){
   String coor_name[XYZ] = {"x", "y", "z"};
   DEBUG_INDENT(indent);
   DEBUG_PRINTLN("Beg legs_print_move_points");
@@ -439,106 +418,304 @@ void legs_print_move_points(float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOV
 // note the path starts at x=0, y=0, z=0 and will change z to the specified z value and then return it to zero if parameters[zi][LEGS_PARAM_UPDN] is > 0.0
 // remember, distances are alway positive! If parameters[coor][LEGS_PARAM_DIST] is not, it will become positive and the sign of parameters[coor][LEGS_PARAM_DIR] will be reversed
 //========================================================
-void legs_coor_move_points(float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent){
-  const char routine[] = "legs_coor_move_points";
-  const char time_lt_zero[] = "time is less than zero";
-  const char times_are_zero[] = "all times are zero";
+void legs_coor_move_points(float &target_time, float parameters[XYZ][LEGS_PARAM_NUM], float move_points[XYZ][LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], int8_t indent){
+  // if target_time < 0.0 then do as fast as possible
+  // if target_time > 0.0 do in target time if it's >= as fast as possible
+  const char *routine = "legs_coor_move_points";
+  const char *time_lt_zero = "time is less than zero";
+  const char *times_are_zero = "all times are zero";
 
-  static const boolean local_debug = true;
-  if(local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("Beg legs_coor_move_points()");
-  }
-//  static const uint8_t xi = 0; // coor index for x in move_point(s)
-//  static const uint8_t yi = 1; // coor index for y in move_point(s)
-//  static const uint8_t zi = 2; // coor index for z in move_point(s)
+  LOCAL_DEBUG_ENABLED
+  if(local_debug) DEBUG_PRINT_BEG(routine, indent);
 
   // first convert postitions to distances and sign
-//  float z; // distance (positive value)
   for(uint8_t coor=0; coor<XYZ; coor++){
     if(parameters[coor][LEGS_PARAM_DIST] >= 0.0){
-      parameters[coor][LEGS_PARAM_DIR] = 1.0;
+//      parameters[coor][LEGS_PARAM_DIR] = 1.0;
     } else {
       parameters[coor][LEGS_PARAM_DIST] = -parameters[coor][LEGS_PARAM_DIST];
-      parameters[coor][LEGS_PARAM_DIR] = -1.0;      
+      parameters[coor][LEGS_PARAM_DIR] = -1.0;  
+//      parameters[coor][LEGS_PARAM_V_BEG] = -parameters[coor][LEGS_PARAM_V_BEG]; //???
+//      parameters[coor][LEGS_PARAM_V_END] = -parameters[coor][LEGS_PARAM_V_END]; //???
     }
   }
   if(local_debug){
+    DEBUG_INDENT(indent+1);
+    DEBUG_PRINTF("target_time: %7.2f\n", target_time);
     legs_print_parameters(parameters, indent+1);
   }
 
-  // now compute the x, y and z move times
-  for(uint8_t coor=0; coor<XYZ; coor++){
-    legs_move_point(parameters[coor], move_points[coor], indent+1); // calculate the move_points coor
-  }
-  if(local_debug){
-    legs_print_move_points(move_points, indent+1);
-  }
-  // if the move time is close to zero, make it zero
-  // and find the slowest time and use that for the move
-  float t[XYZ]; // time for each coordinate's move
-  float slowest_time = 0.0; // initialize the slowest time to zero
-  uint8_t slowest_coor;
-  for(uint8_t coor=0; coor<XYZ; coor++){
-    t[coor] = move_points[coor][LEGS_MOVE_END][LEGS_MOVE_TIME];
-    if(abs(t[coor]) <= COM_ZERO){
-      t[coor] = 0.0;
-      move_points[coor][LEGS_MOVE_END][LEGS_MOVE_TIME] = t[coor];
+  if(target_time < 0.0){
+    // now compute the x, y and z move times as fast as possible
+    for(uint8_t coor=0; coor<XYZ; coor++){
+      legs_move_point(target_time, parameters[coor], move_points[coor], indent+1); // calculate the move_points coor
     }
-    if(t[coor] < 0.0) com_err_msg(routine, time_lt_zero); // make sure the time are not less than zero, otherwise error!
-    // if this is an up/down move, double the time
-    if(parameters[coor][LEGS_PARAM_UPDN] > 0.0){
-      t[coor] = 2.0 * t[coor];
+    if(local_debug){
+      legs_print_move_points(move_points, indent+1);
     }
-    if(t[coor] > slowest_time){
-      // this coordinate is slower
-      slowest_coor = coor; // assume that x is the slowest coordinate
-      slowest_time = t[coor]; // set the new slowest time
-    }
-  }
-  // check to see if the slowest is zero, that means they're all zero
-  // do we expect to ever have a move with no time??
-  if(slowest_time < COM_ZERO){
-    // they are all effectively zero
-    com_err_msg(routine, times_are_zero); 
-  }
-
-  // now slow down the faster movements by recomputing their a_max parameters
-  for(uint8_t coor=0; coor<XYZ; coor++){
-    if(coor == slowest_coor){
-      // it's already slow, do nothing
+    // if the move time is close to zero, make it zero
+    // and find the slowest time and use that for the move
+    float t[XYZ]; // time for each coordinate's move
+    float slowest_time;
+    if(target_time < 0.0){
+      slowest_time = 0.0; // initialize the slowest time to zero
     } else {
-      // need to slow down this coor move unless it's very close to the slowest_time
-      if(abs(slowest_time - t[coor]) < COM_ZERO){
-        // it's nearly the same time as the slowest_time, do nothing
+      slowest_time = target_time; // initilize the slowest time to target_time
+    }
+    
+    int8_t slowest_coor = -1; // initialize to -1 so we know if 
+    for(uint8_t coor=0; coor<XYZ; coor++){
+      t[coor] = move_points[coor][LEGS_MOVE_END][LEGS_MOVE_TIME];
+      if(abs(t[coor]) <= COM_ZERO){
+        t[coor] = 0.0; // if the time for a coor is close to zero, make it zero
+        move_points[coor][LEGS_MOVE_END][LEGS_MOVE_TIME] = t[coor];
+      }
+      if(t[coor] < 0.0) com_err_msg(routine, time_lt_zero); // make sure the time are not less than zero, otherwise error!
+      // if this is an up/down move, double the time
+      if(parameters[coor][LEGS_PARAM_UPDN] > 0.0){
+        t[coor] = 2.0 * t[coor];
+      }
+      if(t[coor] > slowest_time){
+        // this coordinate is slower
+        slowest_coor = coor; // assume that x is the slowest coordinate
+        slowest_time = t[coor]; // set the new slowest time
+      }
+    }
+    
+    // check to see if the slowest is zero, that means they're all zero
+    // do we expect to ever have a move with no time??
+    if(slowest_time < COM_ZERO){
+      // they are all effectively zero
+      com_err_msg(routine, times_are_zero); 
+    }
+  
+    // now slow down the faster movements by recomputing their a_max parameters
+    for(uint8_t coor=0; coor<XYZ; coor++){
+      if(coor == slowest_coor){
+        // it's already slow, do nothing
       } else {
-        // scale the faster coor moves
-        if(parameters[coor][LEGS_PARAM_UPDN] > 0.0){
-          // this is an up/down move so halve the target time
-          legs_move_point_scale_a_max(parameters[coor], move_points[coor], 0.5*slowest_time, indent+1); // now recompute the move_points for the fast coordinate that we want slowed down
-          legs_move_point_for_updn(move_points[coor], indent+1); // now compute the move_points for the up/down
+        // need to slow down this coor move unless it's very close to the slowest_time
+        if(abs(slowest_time - t[coor]) < COM_ZERO){
+          // it's nearly the same time as the slowest_time, do nothing
         } else {
-          // this is not an up/down move (so don't halve the target time)
-          legs_move_point_scale_a_max(parameters[coor], move_points[coor], slowest_time, indent+1); // now recompute the move_points for the fast coordinate that we want slowed down
+          // scale the faster coor moves
+          if(parameters[coor][LEGS_PARAM_UPDN] > 0.0){
+            // this is an up/down move so halve the target time
+            legs_move_point_scale_a_max(parameters[coor], move_points[coor], 0.5*slowest_time, indent+1); // now recompute the move_points for the fast coordinate that we want slowed down
+            legs_move_point_for_updn(move_points[coor], indent+1); // now compute the move_points for the up/down
+          } else {
+            // this is not an up/down move (so don't halve the target time)
+            legs_move_point_scale_a_max(parameters[coor], move_points[coor], slowest_time, indent+1); // now recompute the move_points for the fast coordinate that we want slowed down
+          }
         }
+      }
+      if(parameters[coor][LEGS_PARAM_UPDN] > 0.0){
+        legs_move_point_for_updn(move_points[coor], indent+1); // now compute the move_points for the up/down
+      }
+    }
+    target_time = slowest_time; // update target_time with the slowest time
+    if(local_debug){
+      DEBUG_INDENT(indent+1);
+      DEBUG_PRINTF("slowest_time: %7.2f, target_time: %7.2f\n", slowest_time, target_time);
+    }
+    
+  } else {
+    // target_time > 0.0, force the moves to happen in target_time
+    // now slow down the faster movements by recomputing their a_max parameters
+    for(uint8_t coor=0; coor<XYZ; coor++){
+      // need to slow down this coor move unless it's very close to the slowest_time
+      // scale the faster coor moves
+      if(parameters[coor][LEGS_PARAM_UPDN] > 0.0){
+        // this is an up/down move so halve the target time
+        legs_move_point_scale_a_max(parameters[coor], move_points[coor], 0.5*target_time, indent+1); // now recompute the move_points for the fast coordinate that we want slowed down
+        legs_move_point_for_updn(move_points[coor], indent+1); // now compute the move_points for the up/down
+      } else {
+        // this is not an up/down move (so don't halve the target time)
+        legs_move_point_scale_a_max(parameters[coor], move_points[coor], target_time, indent+1); // now recompute the move_points for the fast coordinate that we want slowed down
       }
     }
   }
+  
   if(local_debug){
+    legs_print_parameters(parameters, indent+1);
     legs_print_move_points(move_points, indent+1);
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("End legs_coor_move_points");
+    DEBUG_PRINT_END(routine, indent);
   }
 } // end legs_coor_move_points
 
 
 //========================================================
+// legs move point
+// computes the key points required to move a given distance based on a maximum velocity and acceleration
+// the returned array includes time and distance to cv (constant velocity / stop accelerating), to dec (decelerating) and to end
+// calculates an array with times and distances of {{end_time, end_dist}, {dec_time, dec_dist}, {cv_time, cv_dist}} 
+// the array could be used along with v_max, a_max to calculate the correct position at any given time
+// if target_time < 0.0 then do as fast as possible
+// if target_time > 0.0 do in target time if it's >= as fast as possible
+//========================================================
+void legs_move_point(float &target_time, float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], int8_t indent){
+  float distance = parameters[LEGS_PARAM_DIST]; // desired move distance
+  float v_max = parameters[LEGS_PARAM_V_MAX]; // maximum allowed velocity
+  float a_max = parameters[LEGS_PARAM_A_MAX]; // maximum allowed acceleration
+  float v_beg = parameters[LEGS_PARAM_V_BEG]; // velocity at beginning of move
+  float v_end = parameters[LEGS_PARAM_V_END]; // velocity at end of move
+  const char *routine = "legs_move_point";
+  const char v_beg_gt_v_max[] = "abs(v_beg) > v_max";
+  const char v_end_gt_v_max[] = "abs(v_end) > v_max";
+  const char v_max_le_zero[] = "v_max <= zero";
+  const char a_max_le_zero[] = "a_max <= zero";
+  const char v_mid_sqrd_le_zero[] = "v_mid_sqrd <= zero";
+
+  LOCAL_DEBUG_ENABLED
+  if(local_debug){
+    DEBUG_PRINT_BEG(routine, indent);
+    DEBUG_INDENT(indent+1);
+    DEBUG_PRINTF("target_time: %7.2f\n", target_time);
+  }
+  
+  if(abs(v_beg) > v_max){
+    com_err_msg(routine, v_beg_gt_v_max);
+    DEBUG_INDENT(indent+1);
+    DEBUG_PRINTF("abs(v_beg) (%7.2f) > v_max (%7.2f)\n", abs(v_beg), v_max);
+  }
+  if(abs(v_end) > v_max){
+    com_err_msg(routine, v_end_gt_v_max);
+    DEBUG_INDENT(indent+1);
+    DEBUG_PRINTF("abs(v_end) (%7.2f) > v_max (%7.2f)\n", abs(v_end), v_max);
+  }
+  if(v_max < COM_ZERO){
+    com_err_msg(routine, v_max_le_zero);
+    DEBUG_INDENT(indent+1);
+    DEBUG_PRINTF("v_max (%7.2f) <= zero\n", v_max);
+  }
+  if(a_max < COM_ZERO){
+    com_err_msg(routine, a_max_le_zero);
+    DEBUG_INDENT(indent+1);
+    DEBUG_PRINTF("a_max (%7.2f) <= zero\n", a_max);
+  }
+
+  if(local_debug){
+    DEBUG_INDENT(indent+1);
+    DEBUG_PRINTF("distance: %7.2f", distance);
+    DEBUG_PRINTF(", v_max: %7.2f", v_max);
+    DEBUG_PRINTF(", a_max: %7.2f", a_max);
+    DEBUG_PRINTF(", v_beg: %7.2f", v_beg);
+    DEBUG_PRINTF(", v_end: %7.2f\n", v_end);
+  }
+
+  if((abs(distance) < COM_ZERO) && (abs(v_beg) < COM_ZERO) && (abs(v_end) < COM_ZERO)){
+    // don't have to do any calculations, just set everything to zero unlesss target_time > 0.0
+    // if target_time > 0.0 set the end time to target_time for each coordinate
+    for(uint8_t point=0; point<LEGS_MOVE_POINT_NUM; point++){
+      for(uint8_t td=0; td<LEGS_MOVE_TD_NUM; td++){
+        if((target_time > 0.0) && (point == LEGS_MOVE_END) && (td == LEGS_MOVE_TIME)){
+          move_point[point][td] = target_time;
+        }else{
+          move_point[point][td] = 0.0;
+        }
+      }
+    }
+  } else {
+    // non-zero move request
+    float t_to_vm = (v_max - v_beg) / a_max; // time to v_max from beginning
+    float d_to_vm = (v_beg * t_to_vm) + (0.5 * a_max * t_to_vm * t_to_vm); // distance to v_max from beginning
+    float t_fm_vm = (v_max - v_end) / a_max; // time from v_max to end
+    float d_fm_vm = (v_end * t_fm_vm) + (0.5 * a_max * t_fm_vm * t_fm_vm); // distance from v_max to end
+    if(local_debug){
+      DEBUG_INDENT(indent+1);
+      DEBUG_PRINTF("t_to_vm: %7.2f, d_to_vm: %7.2f, t_fm_vm: %7.2f, d_fm_vm: %7.2f\n", t_to_vm, d_to_vm, t_fm_vm, d_fm_vm);
+    }
+    float end_time;
+    if(target_time < 0.0){
+      // not being forced to target_time, just do as fast as possible limited by v_max and a_max
+      if((d_to_vm + d_fm_vm) < distance){
+        // limited by v_max
+        end_time = ((distance - (d_to_vm + d_fm_vm)) / v_max) + t_to_vm + t_fm_vm; // end_time when limited by v_max
+        if(local_debug){
+          DEBUG_INDENT(indent+1);
+          DEBUG_PRINTF("limited by v_max, end_time: %7.2f\n", end_time);
+        }
+        move_point[LEGS_MOVE_END][LEGS_MOVE_TIME] = end_time; // end_time
+        move_point[LEGS_MOVE_END][LEGS_MOVE_DIST] = distance;
+        move_point[LEGS_MOVE_DEC2][LEGS_MOVE_TIME] = end_time - t_fm_vm; // dec time
+        move_point[LEGS_MOVE_DEC2][LEGS_MOVE_DIST] = distance - d_fm_vm; // dec distance
+        move_point[LEGS_MOVE_CV2][LEGS_MOVE_TIME] = t_to_vm; // t_to_mv = start of cv_time
+        move_point[LEGS_MOVE_CV2][LEGS_MOVE_DIST] = d_to_vm;
+      }else{
+        // limited by a_max, never get to v_max
+        float v_mid_sqrd = distance * a_max + 0.5*(v_beg * v_beg + v_end * v_end); // v_mid = sqrt(distance*a_max + 0.5*(v_beg^2 + v_end^2))
+        if(v_mid_sqrd < COM_ZERO){
+          com_err_msg(routine, v_mid_sqrd_le_zero);
+          Serial.printf("v_mid_sqrd (%7.2f) <= zero\n", v_mid_sqrd);
+        }
+        float v_mid = sqrt(v_mid_sqrd); // v_mid = sqrt(distance*a_max + 0.5*(v_beg^2 + v_end^2))
+        float t_beg = (v_mid - v_beg) / a_max; // time from beginning to mid point
+        float t_end = (v_mid - v_end) / a_max; // time from end to mid point
+        //float d_beg = (v_beg * t_beg) + (0.5 * a_max * t_beg * t_beg); // distance from beginning to mid point, not required
+        float d_end = (v_end * t_end) + (0.5 * a_max * t_end * t_end); // distance from end to mid point
+        end_time = t_beg + t_end; // total time
+        if(local_debug){
+          DEBUG_INDENT(indent+1);
+          DEBUG_PRINTF("limited by a_max, never get to v_max, v_mid: %7.2f", v_mid);
+          DEBUG_PRINTF(", t_beg: %7.2f", t_beg);
+          DEBUG_PRINTF(", t_end: %7.2f", t_end);
+          //DEBUG_PRINTF(", d_beg: %7.2f", d_beg);
+          DEBUG_PRINTF(", d_end: %7.2f", d_end);
+          DEBUG_PRINTF(", end_time: %7.2f\n", end_time);
+        }
+        move_point[LEGS_MOVE_END][LEGS_MOVE_TIME] = end_time; // end time
+        move_point[LEGS_MOVE_END][LEGS_MOVE_DIST] = distance; // end distance
+        move_point[LEGS_MOVE_DEC2][LEGS_MOVE_TIME] = end_time - t_end; // dec time
+        move_point[LEGS_MOVE_DEC2][LEGS_MOVE_DIST] = distance - d_end; // dec distance
+        move_point[LEGS_MOVE_CV2][LEGS_MOVE_TIME] = end_time - t_end; // cv time, shouldn't be required but...
+        move_point[LEGS_MOVE_CV2][LEGS_MOVE_DIST] = distance - d_end; // cv LEGS_MOVE_DISTst, shouldn't be required but...
+      }
+    } else {
+      // target_time > 0.0
+      // forced to target_time, a_max should have been precomputed properly already
+      // should be limited by calculated a_max, so we never get to v_max
+      float v_mid = 0.5 * (target_time * a_max + v_beg + v_end); // v_mid = (t*a+v_beg+v_end)/2
+      float t_beg = (v_mid - v_beg) / a_max; // time from beginning to mid point
+      float t_end = (v_mid - v_end) / a_max; // time from end to mid point
+      float d_beg = (v_beg * t_beg) + (0.5 * a_max * t_beg * t_beg); // distance from beginning to mid point, not required
+      float d_end = (v_end * t_end) + (0.5 * a_max * t_end * t_end); // distance from end to mid point
+      end_time = t_beg + t_end; // total time
+      if( abs(end_time - target_time) > COM_ZERO){
+        // these should be the same, report error
+        com_err_msg(routine, "end_time != target_time");
+        DEBUG_INDENT(indent+1);
+        DEBUG_PRINTF("end_time (%7.2f) != target_time (%7.2f)\n", end_time, target_time);
+      }
+      if(local_debug){
+        DEBUG_INDENT(indent+1);
+        DEBUG_PRINTF("forced to target_time, limited by a_max, never get to v_max, v_mid: %7.2f", v_mid);
+        DEBUG_PRINTF(", t_beg: %7.2f", t_beg);
+        DEBUG_PRINTF(", t_end: %7.2f", t_end);
+        DEBUG_PRINTF(", d_beg: %7.2f", d_beg);
+        DEBUG_PRINTF(", d_end: %7.2f", d_end);
+        DEBUG_PRINTF(", end_time: %7.2f\n", end_time);
+      }
+      move_point[LEGS_MOVE_END][LEGS_MOVE_TIME] = end_time; // end time
+      move_point[LEGS_MOVE_END][LEGS_MOVE_DIST] = distance; // end distance
+      move_point[LEGS_MOVE_DEC2][LEGS_MOVE_TIME] = end_time - t_end; // dec time
+      move_point[LEGS_MOVE_DEC2][LEGS_MOVE_DIST] = distance - d_end; // dec distance
+      move_point[LEGS_MOVE_CV2][LEGS_MOVE_TIME] = end_time - t_end; // cv time, shouldn't be required but...
+      move_point[LEGS_MOVE_CV2][LEGS_MOVE_DIST] = distance - d_end; // cv LEGS_MOVE_DISTst, shouldn't be required but...
+    }
+  }
+  if(local_debug) DEBUG_PRINT_END(routine, indent);
+} // end legs_move_point
+
+  
+//========================================================
 // legs_move_point_for_updn
 // uses the move_point data from a unidirectional move to create the move_point data for an up/down move
 // note: the time for the up/down move will be twice as much as for the unidirectional move
 //========================================================
-void legs_move_point_for_updn(float move_point[LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], uint8_t indent){
-  static const boolean local_debug = true;
+void legs_move_point_for_updn(float move_point[LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], int8_t indent){
+//  static const boolean local_debug = true;
+//  if(!local_debug) indent = -1;
+  LOCAL_DEBUG_ENABLED
   if(local_debug){
     DEBUG_INDENT(indent);
     DEBUG_PRINTLN("Beg legs_move_point_for_updn");
@@ -577,101 +754,90 @@ void legs_move_point_for_updn(float move_point[LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD
 //========================================================
 // legs_move_point_scale_a_max
 // calculates a scaled a_max to cause the move to happen during specified time = t
-// note that in some cases of large v_beg and v_end that the a_max may be negative!
+// note that in some cases a_max may be negative!
+// the time, t, should be 1/2 in the call if this is an updn move
 //========================================================
-void legs_move_point_scale_a_max(float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], float t, uint8_t indent){
-  const char routine[] = "legs_move_point_scale_a_max";
-  const char term_lt_zero[] = "term less than zero";
-  const char time_le_zero[] = "time less than or equal to zero";
+void legs_move_point_scale_a_max(float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], float t, int8_t indent){
+  const char *routine = "legs_move_point_scale_a_max";
+  const char term_lt_zero[] = "term < zero";
+  const char time_le_zero[] = "time <= zero";
 
   static const boolean local_debug_1 = false;
-  static const boolean local_debug = true;
-  if(local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("Beg legs_move_point_scale_a_max");
-  }
+  LOCAL_DEBUG_ENABLED
+  if (local_debug) DEBUG_PRINT_BEG(routine, indent);
   
   if(t <= COM_ZERO) com_err_msg(routine, time_le_zero); // error!
   
   // need to solve a quadratic of form a*a_max^2 + b*a_max + c = 0.0
   float distance = parameters[LEGS_PARAM_DIST]; // desired move distance
+  float updn = parameters[LEGS_PARAM_UPDN]; // desired move distance
   float v_max = parameters[LEGS_PARAM_V_MAX]; // maximum allowed velocity
   float a_max = parameters[LEGS_PARAM_A_MAX]; // maximum allowed acceleration
-  //float a_max; // maximum allowed acceleration
   float v_beg = parameters[LEGS_PARAM_V_BEG]; // velocity at beginning of move
   float v_end = parameters[LEGS_PARAM_V_END]; // velocity at end of move
 
   if(local_debug){
     DEBUG_INDENT(indent+1);
-    DEBUG_PRINTF("distance: %7.2f", distance);
-    DEBUG_PRINTF(", v_max: %7.2f", v_max);
-    DEBUG_PRINTF(", a_max: %7.2f", a_max);
-    DEBUG_PRINTF(", v_beg: %7.2f", v_beg);
-    DEBUG_PRINTF(", v_end: %7.2f\n", v_end);
+    DEBUG_PRINTF("distance: %7.2f, updn: %7.2f, v_max: %7.2f, a_max: %7.2f, v_beg: %7.2f, v_end: %7.2f, time: %7.2f\n", distance, updn, v_max, a_max, v_beg, v_end, t);
   }
-  
-  float a = t*t; // t^2
-  float b = 2.0 * t * (v_beg + v_end) - 4.0 * distance; // 2*t*(v_beg + v_end) - 4*d
-  float c = - (v_beg - v_end) * (v_beg - v_end); // -(v_beg-v_end)^2
-  float term = b * b - (4.0 * a * c); // b^2-4*a*c
-  if(abs(term) < COM_ZERO) term = 0.0; // in case term is close to zero, make it zero
-  if(term < 0.0) com_err_msg(routine, term_lt_zero); // error!
-  
-  if(local_debug_1){
-    DEBUG_INDENT(indent+1);
-    DEBUG_PRINTF(">>>> term is: %7.2f\n", term);
-  }
-  float sqrt_term = sqrt(term); // sqrt(b^2-4*a*c)
-  if(local_debug_1){
-    DEBUG_INDENT(indent+1);
-    DEBUG_PRINTF(">>>> sqrt_term is: %7.2f\n", sqrt_term);
-  }
-  float a_max_plus = -b + sqrt_term; // we want either the sum, or the difference
-  float a_max_minus = -b - sqrt_term; // we want either the sum, or the difference
-  if(abs(a_max_plus) >= abs(a_max_minus)){
-    a_max = a_max_plus / (2.0 * a);
-  } else {
-    a_max = a_max_minus / (2.0 * a);
-  }
-  if(local_debug_1){
-    DEBUG_INDENT(indent+1);
-    DEBUG_PRINTF(">>>> a_max is: %7.2f\n", a_max);
-  }
-  parameters[LEGS_PARAM_A_MAX] = a_max; // maximum allowed acceleration
-
-  if(local_debug){
-    DEBUG_INDENT(indent+1);
-    DEBUG_PRINTF("distance: %7.2f", distance);
-    DEBUG_PRINTF(", v_max: %7.2f", v_max);
-    DEBUG_PRINTF(", a_max: %7.2f", a_max);
-    DEBUG_PRINTF(", v_beg: %7.2f", v_beg);
-    DEBUG_PRINTF(", v_end: %7.2f\n", v_end);
-  }
-
   if((abs(distance) < COM_ZERO) && (abs(v_beg) < COM_ZERO) && (abs(v_end) < COM_ZERO)){
-    // don't have to do any calculations, just set everything to zero
+    // don't have to do any calculations, just set everything to zero except end time, v_max and a_max
     for(uint8_t point=0; point<LEGS_MOVE_POINT_NUM; point++){
       for(uint8_t td=0; td<LEGS_MOVE_TD_NUM; td++){
         move_point[point][td] = 0.0;
       }
     }
     move_point[LEGS_MOVE_END][LEGS_MOVE_TIME] = t; // set the end time to the requested time
+    parameters[LEGS_PARAM_V_MAX] = 0.0; // set v_max to zero
+    parameters[LEGS_PARAM_A_MAX] = 0.0; // set a_max to zero
+  
   } else {
-    // non-zero move request
+    
+    // we need to do calculations
+    float a = t*t; // t^2
+    float b = 2.0 * t * (v_beg + v_end) - 4.0 * distance; // 2*t*(v_beg + v_end) - 4*d
+    float c = - (v_beg - v_end) * (v_beg - v_end); // -(v_beg-v_end)^2
+    float term = b * b - (4.0 * a * c); // b^2-4*a*c
+    if(abs(term) < COM_ZERO) term = 0.0; // in case term is close to zero, make it zero
+    if(term < 0.0) com_err_msg(routine, term_lt_zero); // error!
+    
+    if(local_debug_1){
+      DEBUG_INDENT(indent+1);
+      DEBUG_PRINTF(">>>> term is: %7.2f\n", term);
+    }
+    float sqrt_term = sqrt(term); // sqrt(b^2-4*a*c)
+    if(local_debug_1){
+      DEBUG_INDENT(indent+1);
+      DEBUG_PRINTF(">>>> a: %7.2f, b: %7.2f, c: %7.2f, sqrt_term is: %7.2f\n", a, b, c, sqrt_term);
+    }
+    float a_max_plus = -b + sqrt_term; // we want either the sum, or the difference
+    float a_max_minus = -b - sqrt_term; // we want either the sum, or the difference
+    if(abs(a_max_plus) >= abs(a_max_minus)){
+      a_max = a_max_plus / (2.0 * a);
+    } else {
+      a_max = a_max_minus / (2.0 * a);
+    }
+    if(local_debug_1){
+      DEBUG_INDENT(indent+1);
+      DEBUG_PRINTF(">>>> a_max is: %7.2f, a_max_plus is: %7.2f, a_max_minus is: %7.2f\n", a_max, a_max_plus, a_max_minus);
+    }
+    parameters[LEGS_PARAM_A_MAX] = a_max; // maximum allowed acceleration
+  
+    if(local_debug){
+      DEBUG_INDENT(indent+1);
+      DEBUG_PRINTF("distance: %7.2f, updn: %7.2f, v_max: %7.2f, a_max: %7.2f, v_beg: %7.2f, v_end: %7.2f, time: %7.2f\n", distance, updn, v_max, a_max, v_beg, v_end, t);
+    }
+
     float v_mid = 0.5*(t*a_max + v_beg + v_end);
     float t_beg = (v_mid - v_beg)/a_max;
     float t_end = (v_mid - v_end)/a_max;
-    float acc_term = 0.5*a_max*t*t;
+    float acc_term = 0.5 * a_max * t_beg * t_beg;
     float d_beg = v_beg*t_beg + acc_term;
     float d_end = v_end*t_end + acc_term;
 
     if(local_debug){
       DEBUG_INDENT(indent+1);
-      DEBUG_PRINTF("v_mid: %7.2f", v_mid);
-      DEBUG_PRINTF(", t_beg: %7.2f", t_beg);
-      DEBUG_PRINTF(", t_end: %7.2f", t_end);
-      DEBUG_PRINTF(", d_beg: %7.2f", d_beg);
-      DEBUG_PRINTF(", d_end: %7.2f\n", d_end);
+      DEBUG_PRINTF("v_mid: %7.2f, t_beg: %7.2f, t_end: %7.2f, d_beg: %7.2f, d_end: %7.2f\n", v_mid, t_beg, t_end, d_beg, d_end);
     }
 
     move_point[LEGS_MOVE_END][LEGS_MOVE_TIME] = t; // end time
@@ -682,136 +848,23 @@ void legs_move_point_scale_a_max(float parameters[LEGS_PARAM_NUM], float move_po
     move_point[LEGS_MOVE_CV2][LEGS_MOVE_DIST] = d_beg; // cv LEGS_MOVE_DISTst, shouldn't be required but...
   }
   
-  if(local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("End legs_move_point_scale_a_max");
-  }
+  if (local_debug) DEBUG_PRINT_END(routine, indent);
 } // end legs_move_point_scale_a_max
 
 
-//========================================================
-// legs move point
-// computes the key points required to move a given distance based on a maximum velocity and acceleration
-// the returned array includes time and distance to cv (constant velocity / stop accelerating), to dec (decelerating) and to end
-// calculates an array with times and distances of {{end_time, end_dist}, {dec_time, dec_dist}, {cv_time, cv_dist}} 
-// the array could be used along with v_max, a_max to calculate the correct position at any given time
-//========================================================
-void legs_move_point(float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], uint8_t indent){
-  float distance = parameters[LEGS_PARAM_DIST]; // desired move distance
-  float v_max = parameters[LEGS_PARAM_V_MAX]; // maximum allowed velocity
-  float a_max = parameters[LEGS_PARAM_A_MAX]; // maximum allowed acceleration
-  float v_beg = parameters[LEGS_PARAM_V_BEG]; // velocity at beginning of move
-  float v_end = parameters[LEGS_PARAM_V_END]; // velocity at end of move
-  const char routine[] = "legs_move_point";
-  const char v_beg_gt_v_max[] = "abs(v_beg) greater than v_max";
-  const char v_end_gt_v_max[] = "abs(v_end) greater than v_max";
-
-  static const boolean local_debug = true;
-  if(local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("Beg legs_move_point");
-  }
-  if(abs(v_beg) > v_max){
-    com_err_msg(routine, v_beg_gt_v_max);
-    Serial.print("abs(v_beg): ");
-    Serial.print(abs(v_beg));
-    Serial.print(" > v_max: ");
-    Serial.println(v_max);
-  }
-  if(abs(v_end) > v_max){
-    com_err_msg(routine, v_end_gt_v_max);
-    Serial.print("abs(v_end): ");
-    Serial.print(abs(v_end));
-    Serial.print(" > v_max: ");
-    Serial.println(v_max);
-  }
-
-  if(local_debug){
-    DEBUG_INDENT(indent+1);
-    DEBUG_PRINTF("distance: %7.2f", distance);
-    DEBUG_PRINTF(", v_max: %7.2f", v_max);
-    DEBUG_PRINTF(", a_max: %7.2f", a_max);
-    DEBUG_PRINTF(", v_beg: %7.2f", v_beg);
-    DEBUG_PRINTF(", v_end: %7.2f\n", v_end);
-  }
-
-  if((abs(distance) < COM_ZERO) && (abs(v_beg) < COM_ZERO) && (abs(v_end) < COM_ZERO)){
-    // don't have to do any calculations, just set everything to zero
-    for(uint8_t point=0; point<LEGS_MOVE_POINT_NUM; point++){
-      for(uint8_t td=0; td<LEGS_MOVE_TD_NUM; td++){
-        move_point[point][td] = 0.0;
-      }
-    }
-  } else {
-    // non-zero move request
-    float t_to_vm = (v_max - v_beg) / a_max; // time to v_max from beginning
-    float d_to_vm = (v_beg * t_to_vm) + (0.5 * a_max * t_to_vm * t_to_vm); // distance to v_max from beginning
-    float t_fm_vm = (v_max - v_end) / a_max; // time from v_max to end
-    float d_fm_vm = (v_end * t_fm_vm) + (0.5 * a_max * t_fm_vm * t_fm_vm); // distance from v_max to end
-    if(local_debug){
-      DEBUG_INDENT(indent+1);
-      DEBUG_PRINTF("t_to_vm: %7.2f", t_to_vm);
-      DEBUG_PRINTF(", d_to_vm: %7.2f", d_to_vm);
-      DEBUG_PRINTF(", t_fm_vm: %7.2f", t_fm_vm);
-      DEBUG_PRINTF(", d_fm_vm: %7.2f\n", d_fm_vm);
-    }
-    float end_time;
-    if((d_to_vm + d_fm_vm) < distance){
-      // limited by v_max
-      if(local_debug){
-        DEBUG_INDENT(indent+1);
-        DEBUG_PRINTLN("limited by v_max");
-      }
-      end_time = ((distance - (d_to_vm + d_fm_vm)) / v_max) + t_to_vm + t_fm_vm; // end_time when limited by v_max
-      move_point[LEGS_MOVE_END][LEGS_MOVE_TIME] = end_time; // end_time
-      move_point[LEGS_MOVE_END][LEGS_MOVE_DIST] = distance;
-      move_point[LEGS_MOVE_DEC2][LEGS_MOVE_TIME] = end_time - t_fm_vm; // dec time
-      move_point[LEGS_MOVE_DEC2][LEGS_MOVE_DIST] = distance - d_fm_vm; // dec distance
-      move_point[LEGS_MOVE_CV2][LEGS_MOVE_TIME] = t_to_vm; // t_to_mv = start of cv_time
-      move_point[LEGS_MOVE_CV2][LEGS_MOVE_DIST] = d_to_vm;
-    }else{
-      // limited by a_max, never get to v_max
-      float v_mid = sqrt(distance * a_max + 0.5*(v_beg * v_beg + v_end * v_end)); // v_mid = sqrt(distance*a_max + 0.5*(v_beg^2 + v_end^2))
-      float t_beg = (v_mid - v_beg) / a_max; // time from beginning to mid point
-      float t_end = (v_mid - v_end) / a_max; // time from end to mid point
-      //float d_beg = (v_beg * t_beg) + (0.5 * a_max * t_beg * t_beg); // distance from beginning to mid point, not required
-      float d_end = (v_end * t_end) + (0.5 * a_max * t_end * t_end); // distance from end to mid point
-      end_time = t_beg + t_end; // total time
-      if(local_debug){
-        DEBUG_INDENT(indent+1);
-        DEBUG_PRINTF("limited by a_max, never get to v_max, v_mid: %7.2f", v_mid);
-        DEBUG_PRINTF(", t_beg: %7.2f", t_beg);
-        DEBUG_PRINTF(", t_end: %7.2f", t_end);
-        DEBUG_PRINTF(", d_end: %7.2f", d_end);
-        DEBUG_PRINTF(", end_time: %7.2f\n", end_time);
-      }
-      move_point[LEGS_MOVE_END][LEGS_MOVE_TIME] = end_time; // end time
-      move_point[LEGS_MOVE_END][LEGS_MOVE_DIST] = distance; // end distance
-      move_point[LEGS_MOVE_DEC2][LEGS_MOVE_TIME] = end_time - t_end; // dec time
-      move_point[LEGS_MOVE_DEC2][LEGS_MOVE_DIST] = distance - d_end; // dec distance
-      move_point[LEGS_MOVE_CV2][LEGS_MOVE_TIME] = end_time - t_end; // cv time, shouldn't be required but...
-      move_point[LEGS_MOVE_CV2][LEGS_MOVE_DIST] = distance - d_end; // cv LEGS_MOVE_DISTst, shouldn't be required but...
-    }
-  }
-  if(local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("End legs_move_point");
-  }
-} // end legs_move_point
-
-  
 //========================================================
 // legs angles
 // computes the angles for the three leg joints for all legs (angle_phk[foot][phk]
 // input the xyz coordiates of each leg foot (foot_xyz[foot][xyz])
 //========================================================
-void legs_angles(float foot_xyz[NUM_LEGS][3], float angle_phk[NUM_LEGS][NUM_JOINTS_LEG]){
+void legs_angles(float foot_xyz[NUM_LEGS][3], float angle_phk[NUM_LEGS][NUM_JOINTS_LEG], int8_t indent){
   const boolean local_debug = false;
-  if(local_debug) DEBUG_PRINTLN("In legs_angles(): ");
+  if(!local_debug) indent = -1;
+  if(local_debug && (indent>=0)) DEBUG_PRINTLN("In legs_angles(): ");
   for(uint8_t leg=0; leg<NUM_LEGS; leg++){
     leg_angles(leg, foot_xyz[leg], angle_phk[leg]);
   }
-  if(local_debug){
+  if(local_debug && (indent>=0)){
     for(uint8_t leg=0; leg<NUM_LEGS; leg++){
       for(uint8_t joint=0; joint<NUM_JOINTS_LEG; joint++){
         DEBUG_PRINT("\t");

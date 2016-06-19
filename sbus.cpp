@@ -8,6 +8,7 @@
 #include "Arduino.h"
 #include "sbus.h"
 #include "debug.h"
+#include "com.h"
 
 #include <FUTABA_SBUS.h> //note, FUTABA_SBUS.h was modified to "#define port Serial2"
 
@@ -29,13 +30,13 @@ static const uint8_t SBUS_NUM_CHANNELS = 6;
 //====================================================
 // setup sbus
 //====================================================
-void sbus_setup(){
+void sbus_setup(int8_t indent){
   sBus.begin();
 //  for(uint8_t i=0; i<; i++){
 //    sbus_channel[i] = 0;
 //  }
   delay(20); // needed to get receiver ready?
-  sbus_update();
+  sbus_update(indent);
 }
 // end sbus_setup
 
@@ -43,45 +44,34 @@ void sbus_setup(){
 //====================================================
 // update sbus
 //====================================================
-void sbus_update(){
-  const boolean local_debug = false;
+void sbus_update(int8_t indent){
+  const static char *routine = "sbus_update";
+  LOCAL_DEBUG_DISABLED
+  if (local_debug) DEBUG_PRINT_BEG(routine, indent);
+  
   static unsigned long oldmilliseconds, newmilliseconds;
   sBus.FeedLine();
   if (sBus.toChannels == 1){
     sBus.UpdateChannels();
-//    for(uint8_t i=0; i<SBUS_NUM_CHANNELS; i++){
-//      sbus_channel[i] = sBus.channels[i];
-//    }
     sBus.toChannels = 0;
     oldmilliseconds = newmilliseconds;
     newmilliseconds = millis();
     if (local_debug) {
-      DEBUG_PRINT("in sbus_update");
-      DEBUG_PRINT("\t");
+      DEBUG_INDENT(indent+1);
       DEBUG_PRINT(newmilliseconds-oldmilliseconds);
-   //   DEBUG_PRINT(millis());
       if(true){
-        DEBUG_PRINT("\t");
-        DEBUG_PRINT(sBus.channels[SBUS_THROTTLE]); // throttle
-        DEBUG_PRINT("\t");
-        DEBUG_PRINT(sBus.channels[SBUS_AILERON]); // aileron
-        DEBUG_PRINT("\t");
-        DEBUG_PRINT(sBus.channels[SBUS_ELEVATOR]); // elevator
-        DEBUG_PRINT("\t");
-        DEBUG_PRINT(sBus.channels[SBUS_RUDDER]); // rudder
-        DEBUG_PRINT("\t");
-        DEBUG_PRINT(sBus.channels[SBUS_GEAR]); // gear
-        DEBUG_PRINT("\t");
-        DEBUG_PRINT(sBus.channels[SBUS_FLAPS]); // flaps
-        DEBUG_PRINT("\t");
-        DEBUG_PRINT(sBus.channels[SBUS_AUX2]); // aux2
-        DEBUG_PRINT("\t");
-        DEBUG_PRINT(sBus.channels[SBUS_AUX3]); // aux3
+        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_THROTTLE]); // throttle
+        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_AILERON]); // aileron
+        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_ELEVATOR]); // elevator
+        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_RUDDER]); // rudder
+        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_GEAR]); // gear
+        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_FLAPS]); // flaps
+        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_AUX2]); // aux2
+        DEBUG_PRINTF("\t%d\n",sBus.channels[SBUS_AUX3]); // aux3
       }
-      DEBUG_PRINTLN();
     }
-//    Serial<<sBus.channels[0]<<","<<sBus.channels[1]<<","<<sBus.channels[2]<<","<<sBus.channels[3]<<"\r\n";
   }  
+  if (local_debug) DEBUG_PRINT_END(routine, indent);
 }
 // end update_sbus
 
@@ -124,9 +114,10 @@ int16_t sbus_channel(uint8_t channel){
 //====================================================
 // SBUS_GEAR_up returns boolean if "gear" is up
 //====================================================
-boolean sbus_gear_up(void){
-  const boolean local_debug = false;
+boolean sbus_gear_up(int8_t indent){
+  LOCAL_DEBUG_DISABLED
   if(local_debug){
+    DEBUG_INDENT(indent);
     DEBUG_PRINT("in SBUS_GEAR_up, sBus.channels[SBUS_GEAR]:");
     DEBUG_PRINTLN(sBus.channels[SBUS_GEAR]);
   }

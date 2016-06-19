@@ -16,8 +16,8 @@
   #define SBUS_AUX2 6
   #define SBUS_AUX3 7
   
-  void sbus_setup();
-  void sbus_update();
+  void sbus_setup(int8_t indent);
+  void sbus_update(int8_t indent);
   int16_t sbus_channel(uint8_t channel);
   void sbus_print_channels(void);
   boolean sbus_gear_up(void);

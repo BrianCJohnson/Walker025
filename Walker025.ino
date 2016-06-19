@@ -25,7 +25,6 @@
 #include <PololuMaestro.h> // apparently need this here and in servo.cpp
 #include "servo.h"
 
-#include "body.h"
 #include "legs.h"
 #include "mode.h"
 
@@ -35,26 +34,22 @@ unsigned long last_time;
 // Walker setup
 //========================================================
 void setup(){
-  const static uint8_t indent = 0;
+  int8_t indent = 0;
   Serial.begin(115200);
   delay(800);
-  static const boolean local_debug = true;
-  if(local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("Beg setup");
-  }
-  //delay(1000);
-  sbus_setup();
+  const char *routine = "setup";
+//  static const boolean local_debug = true;
+//  if(!local_debug) indent = -1;
+  LOCAL_DEBUG_ENABLED
+  if(local_debug) DEBUG_PRINT_BEG(routine, indent);
+  sbus_setup(indent+1);
   servo_setup();
 //  body_setup();
   legs_setup(indent+1);
 //  legs_position_tests();
-  mode_setup(indent);
+  mode_setup(indent+1);
   last_time = millis();
-  if(local_debug){
-    DEBUG_INDENT(indent);
-    DEBUG_PRINTLN("End setup");
-  }
+  if(local_debug) DEBUG_PRINT_END(routine, indent);
 }
 // end setup
 
@@ -64,7 +59,7 @@ void setup(){
 //========================================================
 void loop(){
   //static unsigned long last_time = 0;
-  const static uint8_t indent = 0; // for debug prints
+  const static int8_t indent = 0; // for debug prints
   unsigned long this_time = millis();
   boolean show_time = true;
   if(show_time){
@@ -79,7 +74,7 @@ void loop(){
 //  servo_math_test();
 //  servo_test();
 //  sbus_print_channels();
-  sbus_update();
+  sbus_update(indent+1);
   mode_update(indent+1);
 //  body_update();
 //  position_update();
