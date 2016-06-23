@@ -60,18 +60,18 @@
   const static uint8_t LEGS_MOVE_TD_NUM = 2;
   const static String LEGS_MOVE_TD_NAME[LEGS_MOVE_TD_NUM] = {"TIME", "DIST"};
 
-  const float C60 = cos(PI/3.0);
-  const float S60 = sin(PI/3.0);
-  const float C45 = cos(PI/4.0); // same as sqrt(0.5)
-  //                                         =  (center_2_pivot         + pivot_2_hip          + hip_2_knee          + knee_2_kneecap          - kneecap_2_foot     )
-  const static float LEGS_XYZ_RETRACTED[XYZ] = {(LEGS_CENTER_2_PIVOT_XY + C60*LEGS_PIVOT_2_HIP + 0.0                 + C60*LEGS_KNEE_2_KNEECAP - 0.0                ),
-                                                (LEGS_CENTER_2_PIVOT_XY + S60*LEGS_PIVOT_2_HIP + 0.0                 + S60*LEGS_KNEE_2_KNEECAP - 0.0                ),
-                                                (0.0                    + 0.0                  + LEGS_HIP_2_KNEE + 0.0                         - LEGS_KNEECAP_2_FOOT)};
+  const float C90 = cos(PI*90.0/180.0); // absolute angle 105 degrees
+  const float S90 = sin(PI*90.0/180.0); // absolute angle 105 degrees
+  const float C45 = cos(PI*45.0/180.0); // same as sqrt(0.5)
+  //                                         =  (center_2_pivot         + pivot_2_hip           + hip_2_knee          + knee_2_kneecap           - kneecap_2_foot     )
+  const static float LEGS_XYZ_RETRACTED[XYZ] = {(LEGS_CENTER_2_PIVOT_XY + C90*LEGS_PIVOT_2_HIP  + 0.0                 + C90*LEGS_KNEE_2_KNEECAP  - 0.0                ),
+                                                (LEGS_CENTER_2_PIVOT_XY + S90*LEGS_PIVOT_2_HIP  + 0.0                 + S90*LEGS_KNEE_2_KNEECAP  - 0.0                ),
+                                                (0.0                    + 0.0                   + LEGS_HIP_2_KNEE     + 0.0                      - LEGS_KNEECAP_2_FOOT)};
                                                 
-  //                                         =  (center_2_pivot         + pivot_2_hip          + hip_2_knee          + knee_2_kneecap          - kneecap_2_foot     )
-  const static float LEGS_XYZ_READY[XYZ]     = {(LEGS_CENTER_2_PIVOT_XY + C45*LEGS_PIVOT_2_HIP + C45*LEGS_HIP_2_KNEE + C45*LEGS_KNEE_2_KNEECAP - 0.0                ),
-                                                (LEGS_CENTER_2_PIVOT_XY + C45*LEGS_PIVOT_2_HIP + C45*LEGS_HIP_2_KNEE + C45*LEGS_KNEE_2_KNEECAP - 0.0                ),
-                                                (0.0                    + 0.0                  + 0.0                 + 0.0                     - LEGS_KNEECAP_2_FOOT)};
+  //                                         =  (center_2_pivot         + pivot_2_hip           + hip_2_knee          + knee_2_kneecap           - kneecap_2_foot     )
+  const static float LEGS_XYZ_READY[XYZ]     = {(LEGS_CENTER_2_PIVOT_XY + C45*LEGS_PIVOT_2_HIP  + C45*LEGS_HIP_2_KNEE + C45*LEGS_KNEE_2_KNEECAP  - 0.0                ),
+                                                (LEGS_CENTER_2_PIVOT_XY + C45*LEGS_PIVOT_2_HIP  + C45*LEGS_HIP_2_KNEE + C45*LEGS_KNEE_2_KNEECAP  - 0.0                ),
+                                                (0.0                    + 0.0                   + 0.0                 + 0.0                      - LEGS_KNEECAP_2_FOOT)};
 
   const float LEGS_FOOT_XYZ_SIGNS[NUM_LEGS][XYZ] = {{ 1.0, 1.0, 1.0},
                                                     { 1.0,-1.0, 1.0},

@@ -16,6 +16,8 @@
   const uint8_t NUM_JOINTS_LEG = 3;
   const uint8_t XYZ = 3;
 
+  const boolean signed_distance = false;
+  
   struct com_move_param_s {
     float dist;
     float v_max;

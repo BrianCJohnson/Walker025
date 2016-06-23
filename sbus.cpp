@@ -15,17 +15,9 @@
 // create sBus, a FUTABA_SBUS object
 FUTABA_SBUS sBus;
 
-//#define SBUS_THROTTLE 0
-//#define SBUS_AILERON 1
-//#define SBUS_ELEVATOR 2
-//#define SBUS_RUDDER 3
-//#define SBUS_GEAR 4
-//#define SBUS_FLAPS 5
-//#define SBUS_AUX2 6
-//#define SBUS_AUX3 7
-
 static const uint8_t SBUS_NUM_CHANNELS = 6;
 //uint16_t sbus_channel[SBUS_NUM_CHANNELS];
+boolean sbus_panic_pressed = false;
 
 //====================================================
 // setup sbus
@@ -36,6 +28,7 @@ void sbus_setup(int8_t indent){
 //    sbus_channel[i] = 0;
 //  }
   delay(20); // needed to get receiver ready?
+  sbus_panic_pressed = false;
   sbus_update(indent);
 }
 // end sbus_setup
@@ -64,13 +57,17 @@ void sbus_update(int8_t indent){
         DEBUG_PRINTF("\t%d",sBus.channels[SBUS_AILERON]); // aileron
         DEBUG_PRINTF("\t%d",sBus.channels[SBUS_ELEVATOR]); // elevator
         DEBUG_PRINTF("\t%d",sBus.channels[SBUS_RUDDER]); // rudder
-        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_GEAR]); // gear
-        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_FLAPS]); // flaps
-        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_AUX2]); // aux2
-        DEBUG_PRINTF("\t%d\n",sBus.channels[SBUS_AUX3]); // aux3
+        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_FLIGHT]); // gear
+        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_PANIC]); // flaps
+        DEBUG_PRINTF("\t%d",sBus.channels[SBUS_FLAPS]); // aux2
+        DEBUG_PRINTF("\t%d\n",sBus.channels[SBUS_AUX]); // aux3
       }
     }
   }  
+  if(sBus.channels[SBUS_PANIC] < 400){
+    sbus_panic_pressed = true;
+    Serial.println("SBUS PANIC PRESSED!");
+  }
   if (local_debug) DEBUG_PRINT_END(routine, indent);
 }
 // end update_sbus
@@ -80,25 +77,28 @@ void sbus_update(int8_t indent){
 // sbus_print_channels
 //====================================================
 void sbus_print_channels(void){
-  if(true){
-    DEBUG_PRINT("in sbus_print_channels\t");
-    DEBUG_PRINT(sBus.channels[SBUS_THROTTLE]); // throttle
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(sBus.channels[SBUS_AILERON]); // aileron
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(sBus.channels[SBUS_ELEVATOR]); // elevator
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(sBus.channels[SBUS_RUDDER]); // rudder
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(sBus.channels[SBUS_GEAR]); // gear
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(sBus.channels[SBUS_FLAPS]); // flaps
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(sBus.channels[SBUS_AUX2]); // aux2
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(sBus.channels[SBUS_AUX3]); // aux3
-    DEBUG_PRINTLN();
-  }
+  Serial.printf("in sbus_print_channels\t%d,\t%d,\t%d,\t%d", sBus.channels[SBUS_THROTTLE], sBus.channels[SBUS_AILERON], sBus.channels[SBUS_ELEVATOR], sBus.channels[SBUS_RUDDER]);
+//  Serial.printf("\t%d,\t%d,\t%d,\t%d\n", sBus.channels[SBUS_GEAR], sBus.channels[SBUS_FLAPS], sBus.channels[SBUS_AUX2], sBus.channels[SBUS_AUX3]);
+  Serial.printf("\t%d,\t%d,\t%d,\t%d\n", sBus.channels[SBUS_FLIGHT], sBus.channels[SBUS_PANIC], sBus.channels[SBUS_FLAPS], sBus.channels[SBUS_AUX]);
+//  if(false){
+//    DEBUG_PRINT("in sbus_print_channels\t");
+//    DEBUG_PRINT(sBus.channels[SBUS_THROTTLE]); // throttle
+//    DEBUG_PRINT("\t");
+//    DEBUG_PRINT(sBus.channels[SBUS_AILERON]); // aileron
+//    DEBUG_PRINT("\t");
+//    DEBUG_PRINT(sBus.channels[SBUS_ELEVATOR]); // elevator
+//    DEBUG_PRINT("\t");
+//    DEBUG_PRINT(sBus.channels[SBUS_RUDDER]); // rudder
+//    DEBUG_PRINT("\t");
+//    DEBUG_PRINT(sBus.channels[SBUS_GEAR]); // gear
+//    DEBUG_PRINT("\t");
+//    DEBUG_PRINT(sBus.channels[SBUS_FLAPS]); // flaps
+//    DEBUG_PRINT("\t");
+//    DEBUG_PRINT(sBus.channels[SBUS_AUX2]); // aux2
+//    DEBUG_PRINT("\t");
+//    DEBUG_PRINT(sBus.channels[SBUS_AUX3]); // aux3
+//    DEBUG_PRINTLN();
+//  }
 } // end sbus_print_channels
 
 
@@ -119,9 +119,18 @@ boolean sbus_gear_up(int8_t indent){
   if(local_debug){
     DEBUG_INDENT(indent);
     DEBUG_PRINT("in SBUS_GEAR_up, sBus.channels[SBUS_GEAR]:");
-    DEBUG_PRINTLN(sBus.channels[SBUS_GEAR]);
+    DEBUG_PRINTLN(sBus.channels[SBUS_FLIGHT]);
   }
-  return (sBus.channels[SBUS_GEAR] < 1024);
+  return (sBus.channels[SBUS_FLIGHT] < 1024);
 }
 // end SBUS_GEAR_up
+
+
+//====================================================
+// sbus_panic returns boolean true if PANIC button was ever pressed
+//====================================================
+boolean sbus_panic(int8_t indent){
+  return sbus_panic_pressed;
+}
+// end sbus_panic
 

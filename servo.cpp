@@ -6,6 +6,7 @@
 #include "Arduino.h"
 #include "debug.h"
 #include "com.h"
+#include "mode.h"
 
 #include <PololuMaestro.h>
 
@@ -26,25 +27,32 @@ MiniMaestro maestro(maestroSerial);
 const boolean servo_debug = false;
 const uint8_t num_servos = NUM_LEGS * NUM_JOINTS_LEG; // calculate once based on NUM_LEGS and NUM_JOINTS_LEG defined in common.h
 const uint8_t first_servo = 12; // set to 0 if using Maestro 12 and to 12 if using Maestro 24 with A/D's on first 12 inputs
-const uint16_t servo_at_zero[num_servos] = {uint16_t(4*1491.00), uint16_t(4*1489.00), uint16_t(4*1516.75),
-                                            uint16_t(4*1471.50), uint16_t(4*1515.50), uint16_t(4*1511.50),
-                                            uint16_t(4*1500.75), uint16_t(4*1417.50), uint16_t(4*1564.50),
-                                            uint16_t(4*1530.25), uint16_t(4*1476.25), uint16_t(4*1535.00)};
-const uint16_t servo_at_max[num_servos] =  {uint16_t(4*1491.00), uint16_t(4*1814.00), uint16_t(4*1843.25),
-                                            uint16_t(4*1471.50), uint16_t(4*1848.25), uint16_t(4*1887.25),
-                                            uint16_t(4*1500.75), uint16_t(4*1755.25), uint16_t(4*1882.50),
-                                            uint16_t(4*1530.25), uint16_t(4*1821.00), uint16_t(4*1853.00)};
-const uint16_t servo_at_min[num_servos] =  {uint16_t(4*1491.00), uint16_t(4*1305.00), uint16_t(4*1314.75),
-                                            uint16_t(4*1471.50), uint16_t(4*1329.50), uint16_t(4*1329.50),
-                                            uint16_t(4*1500.75), uint16_t(4*1256.00), uint16_t(4*1393.00), 
-                                            uint16_t(4*1530.25), uint16_t(4*1305.00), uint16_t(4*1363.75)};
-//const int16_t SERVO_MAX_PIVOT = (2*SERVO_HALF_PI)/3; //
-//const int16_t servo_a_maxngle[] = { SERVO_MAX_PIVOT,  SERVO_HALF_PI,  SERVO_HALF_PI,  SERVO_MAX_PIVOT,  SERVO_HALF_PI,  SERVO_HALF_PI,
-//                                    SERVO_MAX_PIVOT,  SERVO_HALF_PI,  SERVO_HALF_PI,  SERVO_MAX_PIVOT,  SERVO_HALF_PI,  SERVO_HALF_PI}; // radians scaled up by
-//const int16_t SERVO_MIN_ANGLE[] = {-SERVO_MAX_PIVOT, -my_math_quar_pi, -my_math_quar_pi, -SERVO_MAX_PIVOT, -my_math_quar_pi, -my_math_quar_pi,
-//                                   -SERVO_MAX_PIVOT, -my_math_quar_pi, -my_math_quar_pi, -SERVO_MAX_PIVOT, -my_math_quar_pi, -my_math_quar_pi}; // radians scaled up by
+// the following are the calibration zero, max and min values
+// the pivot servos (0, 3, 6 and 12) are allowed to exceed the max and min values by pivot_max_extra and pivot_min_extra
+// the hip and foot servos are not allowed to exceed the max values but may exceed the min values by hip_foot_min_extra
+const uint16_t servo_at_zero[num_servos] = {uint16_t(4.0*1491.00), uint16_t(4.0*1491.00), uint16_t(4.0*1509.00),
+                                            uint16_t(4.0*1481.00), uint16_t(4.0*1523.00), uint16_t(4.0*1527.00),
+                                            uint16_t(4.0*1481.00), uint16_t(4.0*1413.00), uint16_t(4.0*1545.00),
+                                            uint16_t(4.0*1530.00), uint16_t(4.0*1480.00), uint16_t(4.0*1501.00)};
+const uint16_t servo_at_max[num_servos] =  {uint16_t(4.0*1667.00), uint16_t(4.0*1818.00), uint16_t(4.0*1841.00),
+                                            uint16_t(4.0*1652.00), uint16_t(4.0*1853.00), uint16_t(4.0*1868.00),
+                                            uint16_t(4.0*1672.00), uint16_t(4.0*1747.00), uint16_t(4.0*1887.00),
+                                            uint16_t(4.0*1701.00), uint16_t(4.0*1822.00), uint16_t(4.0*1838.00)};
+const uint16_t servo_at_min[num_servos] =  {uint16_t(4.0*1315.00), uint16_t(4.0*1310.00), uint16_t(4.0*1329.00),
+                                            uint16_t(4.0*1310.00), uint16_t(4.0*1344.00), uint16_t(4.0*1349.00),
+                                            uint16_t(4.0*1310.00), uint16_t(4.0*1246.00), uint16_t(4.0*1349.00), 
+                                            uint16_t(4.0*1349.00), uint16_t(4.0*1310.00), uint16_t(4.0*1325.00)};
+const float pivot_max_scale = 1.4;
+const float pivot_min_scale = 1.4;
+const float hip_knee_max_scale = 1.0; // not allowed to exceed the servo_at_max values
+const float hip_knee_min_scale = 1.1;
+const float servo_max_target_scale[NUM_JOINTS_LEG] = {pivot_max_scale, hip_knee_max_scale, hip_knee_max_scale};
+const float servo_min_target_scale[NUM_JOINTS_LEG] = {pivot_min_scale, hip_knee_min_scale, hip_knee_min_scale};
+
 float servo_pos_target_scale[num_servos]; // target per radian if radian >= 0.0
 float servo_neg_target_scale[num_servos]; // target per radian if radian < 0.0
+float servo_angle[num_servos];
+uint16_t servo_target[num_servos];
 
 
 //========================================================
@@ -66,8 +74,27 @@ void servo_setup(){
   for(uint8_t leg=0; leg<NUM_LEGS; leg++){
     for(uint8_t joint=0; joint<NUM_JOINTS_LEG; joint++){
       uint8_t servo = (leg*NUM_JOINTS_LEG) + joint;
-      servo_pos_target_scale[servo] = (float(servo_at_max[servo] - servo_at_zero[servo])) / SERVO_MAX_ANGLE[leg][joint];
-      servo_neg_target_scale[servo] = (float(servo_at_min[servo] - servo_at_zero[servo])) / SERVO_MIN_ANGLE[leg][joint];
+      servo_pos_target_scale[servo] = (float(servo_at_max[servo]) - float(servo_at_zero[servo])) / SERVO_MAX_ANGLE[leg][joint];
+      servo_neg_target_scale[servo] = (float(servo_at_min[servo]) - float(servo_at_zero[servo])) / SERVO_MIN_ANGLE[leg][joint];
+    }
+  }
+  if(true){
+    Serial.printf("mode: %d, phase: %d   ", mode_mode_phase_get().mode, mode_phase_get());
+    for(uint8_t leg=0; leg<NUM_LEGS; leg++){
+      for(uint8_t joint=0; joint<NUM_JOINTS_LEG; joint++){
+        uint8_t servo = leg * NUM_JOINTS_LEG + joint;
+        Serial.printf("%d ", servo_at_max[servo]);
+      }
+      Serial.printf("  ");
+    }
+  Serial.println();
+  }
+  if(false){
+    for(uint8_t leg=0; leg<NUM_LEGS; leg++){
+      for(uint8_t joint=0; joint<NUM_JOINTS_LEG; joint++){
+        uint8_t servo = (leg*NUM_JOINTS_LEG) + joint;
+        Serial.printf("servo_pos_target_scale[%d]: %7.2f, servo_neg_target_scale[%d]: %7.2f\n", servo, servo_pos_target_scale[servo], servo, servo_neg_target_scale[servo]);
+      }
     }
   }
 } // end servo_setup
@@ -93,11 +120,11 @@ uint16_t servo_get_target(uint8_t servo){
 //========================================================
 void servo_set_target(uint8_t servo, uint16_t target){
   //if (servo_debug) DEBUG_PRINTLN("In servo_set_target");
-  if (servo_debug) {
-    DEBUG_PRINT("In servo_set_target, servo: ");
-    DEBUG_PRINT(servo);
-    DEBUG_PRINT(", target: ");
-    DEBUG_PRINTLN(target);
+  if (servo_debug & false) {
+    Serial.print("In servo_set_target, servo: ");
+    Serial.print(servo);
+    Serial.print(", target: ");
+    Serial.println(target);
   }
   maestro.setTarget(servo + first_servo, target); // servos before first_servo are inputs
 }
@@ -120,51 +147,88 @@ void servo_set_targets(uint16_t target[]){
 // servo_angle_to_target sets a servo to a specified angle
 // this routine should take into account offsets and non-linearities
 //========================================================
-uint16_t servo_angle_to_target(uint8_t servo, float radian){
-  const boolean local_debug = false;
+uint16_t servo_angle_to_target(uint8_t servo, float radian, uint8_t indent){
+  const char routine[] = "servo_angle_to_target";
+  LOCAL_DEBUG_ENABLED
   if (local_debug){
-    DEBUG_PRINT("In servo_angle_to_target, servo: ");
-    DEBUG_PRINT(servo);
-    DEBUG_PRINT(", radian: ");
-    DEBUG_PRINTF("%7.2f", radian);
+    DEBUG_PRINT_BEG(routine, indent);
+    DEBUG_INDENT(indent+1);
+    DEBUG_PRINTF("servo: %d, radian: %7.2f\n", servo, radian);
   }
-//  const char routine[] = "servo_angle_to_target";
-// const char out_of_range[] = "angle out of range";
+  const char t_gt_range[] = "target greater than range";
+  const char t_lt_range[] = "target less than range";
+  uint8_t leg_joint = servo % NUM_JOINTS_LEG; // to know if this is a pivot, hip or knee joint
   uint16_t target;
   if (radian >= 0.0) {
-    target = uint16_t(radian * servo_pos_target_scale[servo]); // convert radians to target scale
-    if(target > servo_at_max[servo]) {
-      target = servo_at_max[servo];
-//      com_err_msg(routine, out_of_range, servo, radian);
+    target = servo_at_zero[servo] + uint16_t(radian * servo_pos_target_scale[servo]); // convert radians to target scale
+    uint16_t max_target = servo_at_zero[servo] + uint16_t(servo_max_target_scale[leg_joint] * float(servo_at_max[servo] - servo_at_zero[servo]));
+    if(target > max_target){
+      com_err_msg(routine, t_gt_range, servo, radian);
+      Serial.printf("servo: %d, target: %d, max_target: %d\n", servo, target, max_target);
+      target = max_target;
     }
   } else {
-    target = uint16_t(radian * servo_neg_target_scale[servo]); // convert radians to target scale
-    if(target < servo_at_min[servo]) {
-      target = servo_at_min[servo];
-//      com_err_msg(routine, out_of_range, servo, radian);
+    target = servo_at_zero[servo] - uint16_t(radian * servo_neg_target_scale[servo]); // convert radians to target scale
+    uint16_t min_target = servo_at_zero[servo] - uint16_t(servo_min_target_scale[leg_joint] * float(servo_at_zero[servo] - servo_at_min[servo]));
+    if(target < min_target) {
+      com_err_msg(routine, t_lt_range, servo, radian);
+      Serial.printf("servo: %d, target: %d, min_target: %d\n", servo, target, min_target);
+      target = min_target;
     }
   }
+  
+  servo_target[servo] = target;
+  servo_angle[servo] = radian;
+  
   if (servo_debug) {
-    DEBUG_PRINT(", target1: ");
-    DEBUG_PRINT(target);
-  }
-  target = target + servo_at_zero[servo]; // add the zero value
-  if (servo_debug) {
-    DEBUG_PRINT(", target2: ");
+    DEBUG_PRINT("in servo_angle_to_target, target: ");
     DEBUG_PRINTLN(target);
   }
+
   return target;
 } // end servo_angle_to_target
 
 
 //========================================================
+// servo_print_target prints the target of each servo
+//========================================================
+void servo_print_target(void){
+  Serial.printf("        mode: %d, phase: %d    ", mode_mode_phase_get().mode, mode_phase_get());
+  for(uint8_t leg=0; leg<NUM_LEGS; leg++){
+    for(uint8_t joint=0; joint<NUM_JOINTS_LEG; joint++){
+      uint8_t servo = leg * NUM_JOINTS_LEG + joint;
+      Serial.printf("%d    ", servo_target[servo]);
+    }
+    Serial.printf("  ");
+  }
+  Serial.println();
+} // end servo_print_target
+
+
+//========================================================
+// servo_print_angle prints the angle of each servo
+//========================================================
+void servo_print_angle(void){
+  Serial.printf("        mode: %d, phase: %d", mode_mode_phase_get().mode, mode_phase_get());
+  for(uint8_t leg=0; leg<NUM_LEGS; leg++){
+    for(uint8_t joint=0; joint<NUM_JOINTS_LEG; joint++){
+      uint8_t servo = leg * NUM_JOINTS_LEG + joint;
+      Serial.printf(" %7.2f", servo_angle[servo]);
+    }
+    Serial.printf("  ");
+  }
+  Serial.println();
+} // end servo_print_angle
+
+
+//========================================================
 // servo_set_angle sets a servo to a specified angle
-// the angle is specified in radians *2^14
+// the angle is specified in radians
 // this routine should take into account offsets and non-linearities
 //========================================================
-void servo_set_angle(uint8_t servo, float radian){
+void servo_set_angle(uint8_t servo, float radian, uint8_t indent){
   if (servo_debug) DEBUG_PRINTLN("In servo_set_angle");
-  servo_set_target(servo, servo_angle_to_target(servo, radian)); // make it happen
+  servo_set_target(servo, servo_angle_to_target(servo, radian, indent+1)); // make it happen
 } // end servo_angle_to_target
 
 
@@ -173,11 +237,11 @@ void servo_set_angle(uint8_t servo, float radian){
 // the angles are specified in radians *2^14
 // this routine should take into account offsets and non-linearities
 //========================================================
-void servo_set_angles(float radian[NUM_LEGS][NUM_JOINTS_LEG]){
+void servo_set_angles(float radian[NUM_LEGS][NUM_JOINTS_LEG], uint8_t indent){
   if (servo_debug) DEBUG_PRINTLN("In servo_set_angles");
   for(uint8_t leg=0; leg<NUM_LEGS; leg++){
     for(uint8_t joint=0; joint<NUM_JOINTS_LEG; joint++){
-      servo_set_angle((leg * NUM_JOINTS_LEG) + joint, radian[leg][joint]);
+      servo_set_angle((leg * NUM_JOINTS_LEG) + joint, radian[leg][joint], indent+1);
     }
   }
 } // end servo_set_angles

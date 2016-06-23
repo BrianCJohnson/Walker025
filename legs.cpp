@@ -38,7 +38,7 @@ void legs_setup(int8_t indent){
   if(local_debug) legs_print_values("legs_xyz", legs_xyz, indent+1);
   legs_angles(legs_xyz, legs_angle, indent+1); // update leg angles
   if(local_debug) legs_print_values("legs_angle", legs_angle, indent+1);
-  servo_set_angles(legs_angle); // update servos
+  servo_set_angles(legs_angle, indent+1); // update servos
   if (local_debug) DEBUG_PRINT_END(routine, indent);
 } // end legs_setup
 
@@ -429,14 +429,17 @@ void legs_coor_move_points(float &target_time, float parameters[XYZ][LEGS_PARAM_
   if(local_debug) DEBUG_PRINT_BEG(routine, indent);
 
   // first convert postitions to distances and sign
-  for(uint8_t coor=0; coor<XYZ; coor++){
-    if(parameters[coor][LEGS_PARAM_DIST] >= 0.0){
-//      parameters[coor][LEGS_PARAM_DIR] = 1.0;
-    } else {
-      parameters[coor][LEGS_PARAM_DIST] = -parameters[coor][LEGS_PARAM_DIST];
-      parameters[coor][LEGS_PARAM_DIR] = -1.0;  
-//      parameters[coor][LEGS_PARAM_V_BEG] = -parameters[coor][LEGS_PARAM_V_BEG]; //???
-//      parameters[coor][LEGS_PARAM_V_END] = -parameters[coor][LEGS_PARAM_V_END]; //???
+  if(signed_distance){
+    // do nothing
+  } else {
+    for(uint8_t coor=0; coor<XYZ; coor++){
+      if(parameters[coor][LEGS_PARAM_DIST] >= 0.0){
+      } else {
+        parameters[coor][LEGS_PARAM_DIST] = -parameters[coor][LEGS_PARAM_DIST];
+        parameters[coor][LEGS_PARAM_V_BEG] = -parameters[coor][LEGS_PARAM_V_BEG];
+        parameters[coor][LEGS_PARAM_V_END] = -parameters[coor][LEGS_PARAM_V_END];
+        parameters[coor][LEGS_PARAM_DIR] = -1.0;  
+      }
     }
   }
   if(local_debug){
@@ -882,7 +885,7 @@ void legs_angles(float foot_xyz[NUM_LEGS][3], float angle_phk[NUM_LEGS][NUM_JOIN
 // input leg index and the xyz coordiates of the leg foot
 //========================================================
 void leg_angles(uint8_t leg, float foot_xyz[3], float angle[NUM_JOINTS_LEG]){
-  const boolean local_debug = false;
+  const boolean local_debug = true;
   if(local_debug) DEBUG_PRINT("In leg_angles: ");
   //const static uint8_t dim = 3;
   const static uint8_t x = 0;
@@ -894,15 +897,15 @@ void leg_angles(uint8_t leg, float foot_xyz[3], float angle[NUM_JOINTS_LEG]){
   const static uint8_t knee = 2;
   const static float pivot_xyza[NUM_LEGS][4] = {
     { LEGS_CENTER_2_PIVOT_XY,  LEGS_CENTER_2_PIVOT_XY, 0.0,  0.78540},
-    { LEGS_CENTER_2_PIVOT_XY, -LEGS_CENTER_2_PIVOT_XY, 0.0,  2.35619},
+    { LEGS_CENTER_2_PIVOT_XY, -LEGS_CENTER_2_PIVOT_XY, 0.0, -0.78540},
     {-LEGS_CENTER_2_PIVOT_XY, -LEGS_CENTER_2_PIVOT_XY, 0.0, -2.35619},
-    {-LEGS_CENTER_2_PIVOT_XY,  LEGS_CENTER_2_PIVOT_XY, 0.0, -0.78540}
+    {-LEGS_CENTER_2_PIVOT_XY,  LEGS_CENTER_2_PIVOT_XY, 0.0,  2.35619}
   };
   float pivot2foot_xyz[XYZ];
   for(uint8_t i=0; i<XYZ; i++){
     pivot2foot_xyz[i] = foot_xyz[i] - pivot_xyza[leg][i];
   }
-  float pivot_angle = atan2(pivot2foot_xyz[x],pivot2foot_xyz[y]);
+  float pivot_angle = atan2(pivot2foot_xyz[y],pivot2foot_xyz[x]);
   float pivot2foot_gnd = sqrt((pivot2foot_xyz[x] * pivot2foot_xyz[x]) + (pivot2foot_xyz[y] * pivot2foot_xyz[y]));
   float hip2foot_gnd = pivot2foot_gnd - LEGS_PIVOT_2_HIP;
   float hip2foot = sqrt((pivot2foot_xyz[z] * pivot2foot_xyz[z]) + (hip2foot_gnd * hip2foot_gnd));
@@ -911,6 +914,12 @@ void leg_angles(uint8_t leg, float foot_xyz[3], float angle[NUM_JOINTS_LEG]){
   float thigh2hipfoot_angle = acos(((hip2foot * hip2foot) + LEGS_HIP_2_KNEE_SQR_MINUS_KNEE2FOOT_SQR) / (hip2foot * LEGS_TWO_HIP_2_KNEE));
   angle[hip] = hip2foot_angle + thigh2hipfoot_angle;
   angle[pivot] = pivot_angle - pivot_xyza[leg][a];
+  if(angle[pivot] > PI) angle[pivot] = angle[pivot] - 2.0*PI;
+  if(angle[pivot] < -PI){ 
+    //Serial.printf("angle[pivot] (%7.2f) < -PI (%7.2f)", angle[pivot], -PI);
+    angle[pivot] = angle[pivot] + 2.0*PI;
+    //Serial.printf(", after, angle[pivot] (%7.2f)\n", angle[pivot]);
+  }
   angle[knee] = LEGS_PI_MINUS_KNEE_ANGLE_OFFSET - knee_angle;
   // we are not checking to make sure we haven't exceed the max angles
   // we will check for that in the call to servo_set_angle_to_target()
@@ -930,6 +939,20 @@ void leg_angles(uint8_t leg, float foot_xyz[3], float angle[NUM_JOINTS_LEG]){
     DEBUG_PRINT(", hip2foot_angle: ");
     DEBUG_PRINTF("%7.2f\n", hip2foot_angle);
   }
+//    Serial.print(", pivot2foot_x: ");
+//    Serial.printf("%7.2f", pivot2foot_xyz[x]);
+//    Serial.print(", pivot2foot_y: ");
+//    Serial.printf("%7.2f", pivot2foot_xyz[y]);
+//    Serial.print(", pivot_angle: ");
+//    Serial.printf("%7.2f", pivot_angle);
+//    Serial.print(", pivot2foot_gnd: ");
+//    Serial.printf("%7.2f", pivot2foot_gnd);
+//    Serial.print(", hip2foot_gnd: ");
+//    Serial.printf("%7.2f", hip2foot_gnd);
+//    Serial.print(", hip2foot: ");
+//    Serial.printf("%7.2f", hip2foot);
+//    Serial.print(", hip2foot_angle: ");
+//    Serial.printf("%7.2f\n", hip2foot_angle);
 } // end leg_angles
 
 

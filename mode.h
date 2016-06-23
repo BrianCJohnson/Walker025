@@ -23,6 +23,7 @@
     float vy; // y velocity (forward/backward)
     float vx; // x velocity (side to side)
     float vt; // angular velocity (rotation)
+    float panic; // panic
     float height; // height (future)
     float angle; // camera angle (future)
   };
@@ -87,8 +88,9 @@
   const static uint8_t MODE_ROTATING = 10;
   const static uint8_t MODE_ROTATING_BEG = 11;
   const static uint8_t MODE_ROTATING_END = 12;
-  const static uint8_t MODE_NUM = 13;
-  const String MODE_NAME[MODE_NUM] = {"FOLDED", "UNFOLDING", "READY", "FOLDING", "WALKING", "WALKING_BEG", "WALKING_END", "SIDESTEPPING", "SIDESTEPPING_BEG", "SIDESTEPPING_END", "ROTATING", "ROTATING_BEG", "ROTATING_END"};
+  const static uint8_t MODE_SHUT_DOWN = 13;
+  const static uint8_t MODE_NUM = 14;
+  const String MODE_NAME[MODE_NUM] = {"FOLDED", "UNFOLDING", "READY", "FOLDING", "WALKING", "WALKING_BEG", "WALKING_END", "SIDESTEPPING", "SIDESTEPPING_BEG", "SIDESTEPPING_END", "ROTATING", "ROTATING_BEG", "ROTATING_END", "SHUT_DOWN"};
   
   const static uint8_t MODE_DIR_PLUS = 0;
   const static uint8_t MODE_DIR_MINUS = 1;
@@ -115,6 +117,7 @@
   const static uint8_t MODE_PHASE_MAX_NUM = 7; // only allowing 7 phases in a sequence
   
   void mode_setup(int8_t indent);
+  void mode_display_position(void);
   void mode_initialize_parts(int8_t indent);
   void mode_create_sequences(int8_t indent);
   void mode_print_sequences(int8_t indent);
@@ -131,7 +134,7 @@
   void mode_print_parts_xyz(const char *text, float part_xyz[MODE_PART_NUM][XYZ], int8_t indent);
   void mode_print_parts_activity_seq_part(const char *text, uint8_t part_activity[MODE_PART_NUM], uint8_t part_seq_part[MODE_PART_NUM], int8_t indent);
   void mode_update_move_part_data(uint8_t new_mode, uint8_t new_phase, int8_t indent);
-  void mode_execute_move(float current_time, mode_seq_t mode_seq_phase, boolean *move_done, boolean *zero_vel, int8_t indent);
+  void mode_execute_move(float current_seq_time, mode_seq_t mode_seq_phase, boolean *move_done, boolean *zero_vel, int8_t indent);
   void mode_create_next_part_parameters(mode_seq_t next_seq_phase, float next_part_beg_xyz[MODE_PART_NUM][XYZ], float part_parameters[MODE_SEQ_PART_NUM][XYZ][LEGS_PARAM_NUM], uint8_t part_activity_type[MODE_PART_NUM], uint8_t part_seq_part[MODE_PART_NUM], float next_part_parameters[MODE_SEQ_PART_NUM][XYZ][LEGS_PARAM_NUM], int8_t indent);
   void mode_create_next_part_activity_seq_part(mode_seq_t next_seq_phase, uint8_t next_part_activity[MODE_PART_NUM], uint8_t next_part_seq_part[MODE_PART_NUM], int8_t indent);
   void mode_create_next_part_beg_xyz(mode_seq_t next_seq_phase, float part_parameters[MODE_SEQ_PART_NUM][XYZ][LEGS_PARAM_NUM], uint8_t part_activity_type[MODE_PART_NUM], uint8_t part_seq_part[MODE_PART_NUM], float part_beg_xyz[MODE_PART_NUM][XYZ], float next_part_beg_xyz[MODE_PART_NUM][XYZ], int8_t indent);

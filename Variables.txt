@@ -42,3 +42,7 @@ XYZ Coordinates when move is complete
 	activeLegZ = legDistZ if !updn
 	activeLegZ = activeLegZ if updn
 
+
+   0.83	UNFOLDING  0  114.25  142.98 -141.00    142.98 -114.25 -141.00   -114.25 -142.98 -141.00   -142.98  114.25 -141.00      0.00    0.00  141.00  
+141.46	FOLDED     0  114.25  142.98 -141.00    142.98 -114.25 -141.00   -114.25 -142.98 -141.00   -142.98  114.25 -141.00      0.00    0.00  141.00  
+ 

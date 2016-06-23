@@ -69,16 +69,20 @@ void loop(){
     Serial.print(MODE_NAME[mode_mode_phase_get().mode]);
     Serial.print(", phase: ");
     Serial.println(mode_mode_phase_get().phase);
+//    Serial.printf("%s, %s, %d\n", __FILE__, __func__, __LINE__);
   }
   last_time = this_time;
 //  servo_math_test();
 //  servo_test();
-//  sbus_print_channels();
   sbus_update(indent+1);
+//  sbus_print_channels();
   mode_update(indent+1);
 //  body_update();
 //  position_update();
 //  legs_update();
+  mode_display_position();
+  servo_print_angle();
+  servo_print_target();
   delay(100);
 } // end loop
 
