@@ -37,6 +37,7 @@ void setup(){
   int8_t indent = 0;
   Serial.begin(115200);
   delay(800);
+  debug_clr_new_mode();
   const char *routine = "setup";
 //  static const boolean local_debug = true;
 //  if(!local_debug) indent = -1;
@@ -83,7 +84,8 @@ void loop(){
   mode_display_position();
   servo_print_angle();
   servo_print_target();
-  delay(100);
+  debug_clr_new_mode(); // clear new_mode
+  delay(10);
 } // end loop
 
 

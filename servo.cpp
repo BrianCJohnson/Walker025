@@ -31,8 +31,8 @@ const uint8_t first_servo = 12; // set to 0 if using Maestro 12 and to 12 if usi
 // the pivot servos (0, 3, 6 and 12) are allowed to exceed the max and min values by pivot_max_extra and pivot_min_extra
 // the hip and foot servos are not allowed to exceed the max values but may exceed the min values by hip_foot_min_extra
 const uint16_t servo_at_zero[num_servos] = {uint16_t(4.0*1491.00), uint16_t(4.0*1491.00), uint16_t(4.0*1509.00),
-                                            uint16_t(4.0*1481.00), uint16_t(4.0*1523.00), uint16_t(4.0*1527.00),
-                                            uint16_t(4.0*1481.00), uint16_t(4.0*1413.00), uint16_t(4.0*1545.00),
+                                            uint16_t(4.0*1467.00), uint16_t(4.0*1506.00), uint16_t(4.0*1527.00),
+                                            uint16_t(4.0*1501.00), uint16_t(4.0*1413.00), uint16_t(4.0*1545.00),
                                             uint16_t(4.0*1530.00), uint16_t(4.0*1480.00), uint16_t(4.0*1501.00)};
 const uint16_t servo_at_max[num_servos] =  {uint16_t(4.0*1667.00), uint16_t(4.0*1818.00), uint16_t(4.0*1841.00),
                                             uint16_t(4.0*1652.00), uint16_t(4.0*1853.00), uint16_t(4.0*1868.00),
@@ -42,8 +42,8 @@ const uint16_t servo_at_min[num_servos] =  {uint16_t(4.0*1315.00), uint16_t(4.0*
                                             uint16_t(4.0*1310.00), uint16_t(4.0*1344.00), uint16_t(4.0*1349.00),
                                             uint16_t(4.0*1310.00), uint16_t(4.0*1246.00), uint16_t(4.0*1349.00), 
                                             uint16_t(4.0*1349.00), uint16_t(4.0*1310.00), uint16_t(4.0*1325.00)};
-const float pivot_max_scale = 1.4;
-const float pivot_min_scale = 1.4;
+const float pivot_max_scale = 1.7;
+const float pivot_min_scale = 1.7;
 const float hip_knee_max_scale = 1.0; // not allowed to exceed the servo_at_max values
 const float hip_knee_min_scale = 1.1;
 const float servo_max_target_scale[NUM_JOINTS_LEG] = {pivot_max_scale, hip_knee_max_scale, hip_knee_max_scale};
@@ -89,7 +89,7 @@ void servo_setup(){
     }
   Serial.println();
   }
-  if(false){
+  if(true){
     for(uint8_t leg=0; leg<NUM_LEGS; leg++){
       for(uint8_t joint=0; joint<NUM_JOINTS_LEG; joint++){
         uint8_t servo = (leg*NUM_JOINTS_LEG) + joint;
@@ -168,7 +168,7 @@ uint16_t servo_angle_to_target(uint8_t servo, float radian, uint8_t indent){
       target = max_target;
     }
   } else {
-    target = servo_at_zero[servo] - uint16_t(radian * servo_neg_target_scale[servo]); // convert radians to target scale
+    target = servo_at_zero[servo] - uint16_t(-radian * servo_neg_target_scale[servo]); // convert radians to target scale
     uint16_t min_target = servo_at_zero[servo] - uint16_t(servo_min_target_scale[leg_joint] * float(servo_at_zero[servo] - servo_at_min[servo]));
     if(target < min_target) {
       com_err_msg(routine, t_lt_range, servo, radian);

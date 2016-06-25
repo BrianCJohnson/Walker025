@@ -505,7 +505,7 @@ void legs_coor_move_points(float &target_time, float parameters[XYZ][LEGS_PARAM_
           if(parameters[coor][LEGS_PARAM_UPDN] > 0.0){
             // this is an up/down move so halve the target time
             legs_move_point_scale_a_max(parameters[coor], move_points[coor], 0.5*slowest_time, indent+1); // now recompute the move_points for the fast coordinate that we want slowed down
-            legs_move_point_for_updn(move_points[coor], indent+1); // now compute the move_points for the up/down
+ //           legs_move_point_for_updn(move_points[coor], indent+1); // now compute the move_points for the up/down
           } else {
             // this is not an up/down move (so don't halve the target time)
             legs_move_point_scale_a_max(parameters[coor], move_points[coor], slowest_time, indent+1); // now recompute the move_points for the fast coordinate that we want slowed down
@@ -865,7 +865,7 @@ void legs_angles(float foot_xyz[NUM_LEGS][3], float angle_phk[NUM_LEGS][NUM_JOIN
   if(!local_debug) indent = -1;
   if(local_debug && (indent>=0)) DEBUG_PRINTLN("In legs_angles(): ");
   for(uint8_t leg=0; leg<NUM_LEGS; leg++){
-    leg_angles(leg, foot_xyz[leg], angle_phk[leg]);
+    leg_angles(leg, foot_xyz[leg], angle_phk[leg], indent+1);
   }
   if(local_debug && (indent>=0)){
     for(uint8_t leg=0; leg<NUM_LEGS; leg++){
@@ -884,8 +884,9 @@ void legs_angles(float foot_xyz[NUM_LEGS][3], float angle_phk[NUM_LEGS][NUM_JOIN
 // computes the angles for the three leg joints
 // input leg index and the xyz coordiates of the leg foot
 //========================================================
-void leg_angles(uint8_t leg, float foot_xyz[3], float angle[NUM_JOINTS_LEG]){
-  const boolean local_debug = true;
+void leg_angles(uint8_t leg, float foot_xyz[3], float angle[NUM_JOINTS_LEG], int8_t indent){
+//  const boolean local_debug = true;
+  LOCAL_DEBUG_ENABLED
   if(local_debug) DEBUG_PRINT("In leg_angles: ");
   //const static uint8_t dim = 3;
   const static uint8_t x = 0;

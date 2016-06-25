@@ -83,9 +83,18 @@
 //  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{200.0, 200.0},
 //                                         {200.0, 200.0},
 //                                         {200.0, 200.0}}; // linear velocity and acceleration max
-  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{40.0, 20.0},
-                                         {40.0, 20.0},
-                                         {40.0, 20.0}}; // linear velocity and acceleration max
+  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{640.0, 2000.0},
+                                         {640.0, 2000.0},
+                                         {640.0, 2000.0}}; // linear velocity and acceleration max
+//  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{640.0, 320.0},
+//                                         {640.0, 320.0},
+//                                         {640.0, 320.0}}; // linear velocity and acceleration max
+//  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{320.0, 160.0},
+//                                         {320.0, 160.0},
+//                                         {320.0, 160.0}}; // linear velocity and acceleration max
+//  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{160.0, 80.0},
+//                                         {160.0, 80.0},
+//                                         {160.0, 80.0}}; // linear velocity and acceleration max
 
   void legs_setup(int8_t indent);
   void legs_print_values(String value_name, float value[NUM_LEGS][XYZ], int8_t indent);
@@ -101,7 +110,7 @@
   void legs_move_point_for_updn(float move_point[LEGS_MOVE_POINT_NUM][LEGS_MOVE_TD_NUM], int8_t indent);
   void legs_move_point_scale_a_max(float parameters[LEGS_PARAM_NUM], float move_point[3][LEGS_MOVE_TD_NUM], float t, int8_t indent);
   void legs_angles(float foot_xyz[NUM_LEGS][XYZ], float angle_phk[NUM_LEGS][NUM_JOINTS_LEG], int8_t indent);
-  void leg_angles(uint8_t leg, float foot_xyz[XYZ], float angle[NUM_JOINTS_LEG]);
+  void leg_angles(uint8_t leg, float foot_xyz[XYZ], float angle[NUM_JOINTS_LEG], int8_t indent);
 //  boolean legs_change_sequence(uint8_t new_sequence); // change sequence
 //  uint8_t legs_sequence(void); // returns the current legs_sequence
 //  boolean legs_folded(void); // returns whether the legs are folded

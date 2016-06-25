@@ -10,11 +10,17 @@
 //  #define DEBUG // comment this out to disable debug printout
 
   #ifdef DEBUG
+//    #define LOCAL_DEBUG_ENABLED   boolean local_debug; \
+//                            if(indent<0){ \
+//                              local_debug = false; \
+//                            } else { \
+//                              local_debug = true;  \
+//                            } // if we want local_debug enabled but controlled by indent
     #define LOCAL_DEBUG_ENABLED   boolean local_debug; \
                             if(indent<0){ \
                               local_debug = false; \
                             } else { \
-                              local_debug = true;  \
+                              local_debug = debug_new_mode();  \
                             } // if we want local_debug enabled but controlled by indent
     #define LOCAL_DEBUG_DISABLED    static const boolean local_debug = false; \
                               indent = -9; // if we don't want local_debug or subroutines enabled
@@ -36,5 +42,9 @@
     #define DEBUG_PRINT_BEG2(...)
     #define DEBUG_PRINT_END(...)
   #endif
+
+  boolean debug_new_mode(void);
+  void debug_set_new_mode(void);
+  void debug_clr_new_mode(void);
   
 #endif
