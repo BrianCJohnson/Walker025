@@ -433,8 +433,8 @@ void legs_coor_move_points(float &target_time, float parameters[XYZ][LEGS_PARAM_
     // do nothing
   } else {
     for(uint8_t coor=0; coor<XYZ; coor++){
-      if(parameters[coor][LEGS_PARAM_DIST] >= 0.0){
-      } else {
+      if(abs(parameters[coor][LEGS_PARAM_DIST]) < COM_ZERO) parameters[coor][LEGS_PARAM_DIST] = 0.0; // make -0.0 => +0.0 positive
+      if(parameters[coor][LEGS_PARAM_DIST] < -COM_ZERO){
         parameters[coor][LEGS_PARAM_DIST] = -parameters[coor][LEGS_PARAM_DIST];
         parameters[coor][LEGS_PARAM_V_BEG] = -parameters[coor][LEGS_PARAM_V_BEG];
         parameters[coor][LEGS_PARAM_V_END] = -parameters[coor][LEGS_PARAM_V_END];

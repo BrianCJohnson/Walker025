@@ -20,8 +20,8 @@ float move_part_xyz[MODE_PART_NUM][XYZ]; // xyz coordinates of each part (each l
 float move_part_beg_xyz[MODE_PART_NUM][XYZ]; // xyz coordinates of each part at the beginning of the current move seq (each leg and the body)
 uint8_t move_part_activity[MODE_PART_NUM]; // updated between move sequences, indicates the activity and type of each part (the part type: MODE_PART_TYPE_ & {"SUPPORT_LEG", "ACTIVE_LEG", "STATIC_BODY", "ACTIVE_BODY"})
 uint8_t move_part_seq_part[MODE_PART_NUM]; // updated between move sequences, indicates which seq_part (if any) is associated with the part
-uint8_t mode_next_mode; // may be none or a commanded mode, set in mode_check_new_mode
-uint8_t mode_next_mode_dir; // used in conjunction with mode_next_mode above, also set in mode_check_new_mode
+uint8_t gmode_next_mode; // may be none or a commanded mode, set in mode_check_new_mode
+uint8_t gmode_next_dir; // used in conjunction with mode_next_mode above, also set in mode_check_new_mode
 //float move_part_v_end
 
 
@@ -36,12 +36,14 @@ void mode_setup(int8_t indent) {
   mode_phase.alternate = 0; // need to initialize this once only?
   mode_create_sequences(indent+1); // create the sequences that will be used over and over
   mode_initialize_parts(indent+1); // sets all of the move_part_xyz[MODE_PART_NUM][XYZ] and move_part_beg_xyz[MODE_PART_NUM][XYZ]
-  mode_set(MODE_FOLDED, MODE_DIR_NONE, indent+1); // do this after everything else is set up
+  uint8_t new_phase = 0;
+  mode_set(MODE_FOLDED, MODE_DIR_NONE, new_phase, indent+1); // do this after everything else is set up
   mode_phase.start_time = millis();
   //mode_phase.end_time = mode_phase.start_time + 100; // give it 1/10 sec 
   mode_phase.end_time = mode_phase.start_time; 
   if (local_debug) DEBUG_PRINT_END(routine, indent);
 } // end mode_setup
+
 
 //========================================================
 // mode_display_position
@@ -72,6 +74,7 @@ void mode_display_position(void){
   }
   Serial.println();
 } // end mode_display_position
+
 
 //========================================================
 // mode_initialize_parts
@@ -200,6 +203,10 @@ void mode_create_sequences(int8_t indent) {
   static const boolean last_phase = true;
   static const boolean not_last_phase = false;
 
+  // sequence for shut down {last_phase, descriptive string,                    {part_id,        {     x,     y,     z}, {end_vx, end_vy, end_vz}},
+  mode_seq[MODE_SHUT_DOWN][0] = {last_phase, "shut down",                         {{MODE_PART_NONE, {   0.0,   0.0,   0.0}, {   0.0,   0.0,   0.0}},  // do nothing
+                                                                                {MODE_PART_NONE, {   0.0,   0.0,   0.0}, {   0.0,   0.0,   0.0}}}};
+
   // sequence for folded     {last_phase, descriptive string,                   {part_id,        {     x,     y,     z}, {end_vx, end_vy, end_vz}},
   mode_seq[MODE_FOLDED][0] = {last_phase, "folded",                            {{MODE_PART_NONE, {   0.0,   0.0, BZNOM}, {   0.0,   0.0,   0.0}},  // do nothing
                                                                                 {MODE_PART_NONE, {   0.0,   0.0,   0.0}, {   0.0,   0.0,   0.0}}}};
@@ -286,80 +293,54 @@ void mode_create_sequences(int8_t indent) {
 // mode_print_sequences()
 //========================================================
 void mode_print_sequences(int8_t indent){
-//  static const boolean local_debug = true;
-//  if(!local_debug) indent = -1;
-//  LOCAL_DEBUG_ENABLED
-//  mode_seq_t this_mode_seq;
-//  mode_seq_part_t seq_part;
-//  if (local_debug){
-//    DEBUG_INDENT(indent);
-//    DEBUG_PRINTLN("Beg mode_print_sequences");
-//    for(uint8_t mode=0; mode<MODE_NUM; mode++){
-//      for(uint8_t phase=0; phase<MODE_PHASE_MAX_NUM; phase++){
-//        this_mode_seq = mode_seq[mode][phase];
-//        DEBUG_INDENT(indent+1);
-//        DEBUG_PRINTF("mode_seq[%s][%u]: ", MODE_NAME[mode].c_str(), phase);
-//        if(this_mode_seq.last_phase) {
-//          DEBUG_PRINT("last_phase");
-//        } else {
-//          DEBUG_PRINT("not_last_phase");
-//        }
-//        DEBUG_PRINTF(", %s\n", this_mode_seq.phase_name.c_str());
-//        for(uint8_t seq_part_i=0; seq_part_i<MODE_SEQ_PART_NUM; seq_part_i++){
-//          seq_part = this_mode_seq.part[seq_part_i];
-//          DEBUG_INDENT(indent+1);
-//          DEBUG_PRINT("-\t\t\t\t");
-//          DEBUG_PRINTF("%s D:", MODE_PART_NAME[seq_part.part_id].c_str());
-//          for(uint8_t coor=0; coor<XYZ; coor++){
-//            DEBUG_PRINTF(" %7.2f", seq_part.d[coor]);
-//          }
-//          DEBUG_PRINTF(", V:", MODE_PART_NAME[seq_part.part_id].c_str());
-//          for(uint8_t coor=0; coor<XYZ; coor++){
-//            DEBUG_PRINTF(" %7.2f", seq_part.v[coor]);
-//          }
-//          DEBUG_PRINTLN();
-//        }
-//        if(this_mode_seq.last_phase) break;
-//      }
-//    }
-//    DEBUG_INDENT(indent);
-//    DEBUG_PRINTLN("End mode_print_sequences");
-//  }
   mode_seq_t this_mode_seq;
-  mode_seq_part_t seq_part;
-//  DEBUG_INDENT(indent);
+  DEBUG_INDENT(indent);
   Serial.println("Beg mode_print_sequences");
   for(uint8_t mode=0; mode<MODE_NUM; mode++){
     for(uint8_t phase=0; phase<MODE_PHASE_MAX_NUM; phase++){
+      DEBUG_INDENT(indent+1);
+      Serial.printf("mode_seq[%s][%u]: \n", MODE_NAME[mode].c_str(), phase);
       this_mode_seq = mode_seq[mode][phase];
-//      DEBUG_INDENT(indent+1);
-      Serial.printf("mode_seq[%s][%u]: ", MODE_NAME[mode].c_str(), phase);
-      if(this_mode_seq.last_phase) {
-        Serial.print("last_phase");
-      } else {
-        Serial.print("not_last_phase");
-      }
-      Serial.printf(", %s\n", this_mode_seq.phase_name.c_str());
-      for(uint8_t seq_part_i=0; seq_part_i<MODE_SEQ_PART_NUM; seq_part_i++){
-        seq_part = this_mode_seq.part[seq_part_i];
-//        DEBUG_INDENT(indent+1);
-        Serial.print("-\t\t\t\t");
-        Serial.printf("%s D:", MODE_PART_NAME[seq_part.part_id].c_str());
-        for(uint8_t coor=0; coor<XYZ; coor++){
-          Serial.printf(" %7.2f", seq_part.d[coor]);
-        }
-        Serial.printf(", V:", MODE_PART_NAME[seq_part.part_id].c_str());
-        for(uint8_t coor=0; coor<XYZ; coor++){
-          Serial.printf(" %7.2f", seq_part.v[coor]);
-        }
-        Serial.println();
-      }
+      mode_print_sequence(this_mode_seq, indent+1);
       if(this_mode_seq.last_phase) break;
     }
   }
-//  DEBUG_INDENT(indent);
+  DEBUG_INDENT(indent);
   Serial.println("End mode_print_sequences");
 } // end mode_print_sequences
+
+
+//========================================================
+// mode_print_sequence()
+//========================================================
+void mode_print_sequence(mode_seq_t this_mode_seq, int8_t indent){
+  DEBUG_INDENT(indent);
+  Serial.println("Beg mode_print_sequence");
+  DEBUG_INDENT(indent+1);
+  if(this_mode_seq.last_phase) {
+    Serial.print("last_phase");
+  } else {
+    Serial.print("not_last_phase");
+  }
+  Serial.printf(", %s\n", this_mode_seq.phase_name.c_str());
+  mode_seq_part_t seq_part;
+  for(uint8_t seq_part_i=0; seq_part_i<MODE_SEQ_PART_NUM; seq_part_i++){
+    seq_part = this_mode_seq.part[seq_part_i];
+    DEBUG_INDENT(indent+1);
+//    Serial.print("-\t\t\t\t");
+    Serial.printf("%s D:", MODE_PART_NAME[seq_part.part_id].c_str());
+    for(uint8_t coor=0; coor<XYZ; coor++){
+      Serial.printf(" %7.2f", seq_part.d[coor]);
+    }
+    Serial.printf(", V:", MODE_PART_NAME[seq_part.part_id].c_str());
+    for(uint8_t coor=0; coor<XYZ; coor++){
+      Serial.printf(" %7.2f", seq_part.v[coor]);
+    }
+    Serial.println();
+  }
+  DEBUG_INDENT(indent);
+  Serial.println("End mode_print_sequence");
+} // end mode_print_sequence
 
 
 //========================================================
@@ -423,6 +404,10 @@ void mode_update(int8_t indent) {
 //========================================================
 void mode_check_new_mode(int8_t indent) {
   uint8_t current_mode = mode_phase.mode; // get the current mode
+  uint8_t current_dir = mode_phase.direction; // get the current direction
+  uint8_t temp_next_mode;
+  uint8_t temp_next_dir;
+  uint8_t temp_next_phase;
   const static char *routine = "mode_check_new_mode";
   LOCAL_DEBUG_ENABLED  
 //  local_debug = true; ////////
@@ -432,27 +417,29 @@ void mode_check_new_mode(int8_t indent) {
     DEBUG_PRINTF("current_mode: %s, phase: %d\n", MODE_NAME[current_mode].c_str(), mode_phase.phase);
   }
   mode_values_update(indent+1);
-  mode_next_mode = MODE_NONE; // default is no new commanded mode
-  mode_next_mode_dir = MODE_DIR_NONE; // default if there is no new commanded mode or it doesn't require a direction
+  temp_next_mode = MODE_NONE; // default is no new commanded mode
+  temp_next_dir = MODE_DIR_NONE; // default is no new commanded direction
 
   if(sbus_panic(indent+1)){
-    // panic button has been hit, stop everything
-    mode_set(MODE_SHUT_DOWN, MODE_DIR_NONE, indent+1);
+    // panic button has been hit, stop everything immediately with a mode_set
+    temp_next_phase = 0;
+    mode_set(MODE_SHUT_DOWN, MODE_DIR_NONE, temp_next_phase, indent+1);
   } else {
     // not in panic, proceed as normal
     float vy, vx, vt;
     vy= mode_value_vy();
     vx = mode_value_vx();
     vt = mode_value_vt();
+//    Serial.printf("in mode_check_new_mode, vy: %7.2f vx: %7.2f, vt: %7.2f\n", vy, vx, vt);
     switch (current_mode) {
       case MODE_FOLDED:
       case MODE_FOLDING:
         // currently folded or folding, for the next mode we can either stay folded or unfold
         // should check other conditions: powered down, check if radio, power, orientation are OK
         if (!mode_value_fold()) {
-          mode_next_mode = MODE_UNFOLDING;
+          temp_next_mode = MODE_UNFOLDING;
         } else {
-          mode_next_mode = MODE_FOLDED;
+          temp_next_mode = MODE_FOLDED;
         }
         break;
       case MODE_UNFOLDING:
@@ -463,64 +450,98 @@ void mode_check_new_mode(int8_t indent) {
         // if the current_mode is MODE_READY or any of the others that end at MODE_READY, we can start doing anything based on the inputs
         if (mode_value_fold()) {
           // folding gets priority over other inputs, so it comes first
-          mode_next_mode = MODE_FOLDING;
+          temp_next_mode = MODE_FOLDING;
         } else if(abs(vy) > COM_ZERO) {
           // We're going to walk! Which direction though?
-          mode_next_mode = MODE_WALKING_BEG;
+          temp_next_mode = MODE_WALKING_BEG;
           if(vy > 0.0) {
-            mode_next_mode_dir = MODE_DIR_PLUS;
+            temp_next_dir = MODE_DIR_PLUS;
           } else {
-            mode_next_mode_dir = MODE_DIR_MINUS;
+            temp_next_dir = MODE_DIR_MINUS;
           }
         } else if(abs(vx) > COM_ZERO) {
           // We're going to sidestep! Which direction though?
-          mode_next_mode = MODE_SIDESTEPPING_BEG;
+          temp_next_mode = MODE_SIDESTEPPING_BEG;
           if(vx > 0.0) {
-            mode_next_mode_dir = MODE_DIR_PLUS;
+            temp_next_dir = MODE_DIR_PLUS;
           } else {
-            mode_next_mode_dir = MODE_DIR_MINUS;
+            temp_next_dir = MODE_DIR_MINUS;
           }
         } else if(abs(vt) > COM_ZERO) {
           // We're going to rotate! Which direction though?
-          mode_next_mode = MODE_ROTATING_BEG;
+          temp_next_mode = MODE_ROTATING_BEG;
           if(vt > 0.0) {
-            mode_next_mode_dir = MODE_DIR_PLUS;
+            temp_next_dir = MODE_DIR_PLUS;
           } else {
-            mode_next_mode_dir = MODE_DIR_MINUS;
+            temp_next_dir = MODE_DIR_MINUS;
           }
         } else {
-          mode_next_mode = MODE_READY;
+          temp_next_mode = MODE_READY;
         }
         break;
       case MODE_WALKING_BEG:
       case MODE_WALKING:
-        Serial.printf("vy: %7.2f vx: %7.2f, vt: %7.2f\n", vy, vx, vt);
-        if(abs(vy) > COM_ZERO){
-          // keep walking
-          mode_next_mode = MODE_WALKING;
+        temp_next_dir = current_dir; // keep going the same direction
+        if(current_dir == MODE_DIR_PLUS){
+          if(vy > COM_ZERO){
+            // keep walking forward
+            temp_next_mode = MODE_WALKING;
+          } else {
+            // stop walking forward
+            temp_next_mode = MODE_WALKING_END;
+          }
         } else {
-          // stop walking
-          mode_next_mode = MODE_WALKING_END;
+          // was going backwards
+          Serial.printf("in mode_check_new_mode, vy: %14.7f, COM_ZERO: %14.7f\n", vy, COM_ZERO);
+          if(vy < -COM_ZERO){
+            // keep walking backward
+            temp_next_mode = MODE_WALKING;
+          } else {
+            // stop walking backward
+            temp_next_mode = MODE_WALKING_END;
+          }
         }
         break;
       case MODE_SIDESTEPPING_BEG:
       case MODE_SIDESTEPPING:
-        if(abs(vx) > COM_ZERO){
-          // keep sidestepping
-          mode_next_mode = MODE_SIDESTEPPING;
+        temp_next_dir = current_dir; // keep going the same direction
+        if(current_dir == MODE_DIR_PLUS){
+          if(vx > COM_ZERO){
+            // keep sidestepping to the right
+            temp_next_mode = MODE_SIDESTEPPING;
+          } else {
+            // stop sidestepping to the right
+            temp_next_mode = MODE_SIDESTEPPING_END;
+          }
         } else {
-          // stop sidestepping
-          mode_next_mode = MODE_SIDESTEPPING_END;
+          if(vx < -COM_ZERO){
+            // keep sidestepping to the left
+            temp_next_mode = MODE_SIDESTEPPING;
+          } else {
+            // stop sidestepping to the left
+            temp_next_mode = MODE_SIDESTEPPING_END;
+          }
         }
         break;
       case MODE_ROTATING_BEG:
       case MODE_ROTATING:
-        if(abs(vt) > COM_ZERO){
-          // keep rotating
-          mode_next_mode = MODE_ROTATING;
+        temp_next_dir = current_dir; // keep going the same direction
+        if(current_dir == MODE_DIR_PLUS){
+          if(vt > COM_ZERO){
+            // keep rotating ccw
+            temp_next_mode = MODE_ROTATING;
+          } else {
+            // stop rotating ccw
+            temp_next_mode = MODE_ROTATING_END;
+          }
         } else {
-          // stop rotating
-          mode_next_mode = MODE_ROTATING_END;
+          if(vt < -COM_ZERO){
+            // keep rotating cw
+            temp_next_mode = MODE_ROTATING;
+          } else {
+            // stop rotating cw
+            temp_next_mode = MODE_ROTATING_END;
+          }
         }
         break;
       default:
@@ -529,17 +550,17 @@ void mode_check_new_mode(int8_t indent) {
         break;
     }
   }
-  if(mode_next_mode == MODE_NONE){
+  if(temp_next_mode == MODE_NONE){
     // this shouldn't happen as we should always set a valid mode in the above code
-    com_err_msg(routine,"mode_next_mode == MODE_NONE");
+    com_err_msg(routine,"temp_next_mode == MODE_NONE");
   }
+
+  mode_set_next(temp_next_mode, temp_next_dir, indent+1);
 //  if (local_debug && true){       
   if (true){       
     DEBUG_INDENT(indent+1);
-    DEBUG_PRINTF("mode_next_mode: %s, mode_next_mode_dir: %s\n", MODE_NAME[mode_next_mode].c_str(), MODE_DIR_NAME[mode_next_mode_dir].c_str());
-    Serial.printf("mode_next_mode: %s, mode_next_mode_dir: %s\n", MODE_NAME[mode_next_mode].c_str(), MODE_DIR_NAME[mode_next_mode_dir].c_str());
-//    mode_print_parts_xyz("move_part_xyz", move_part_xyz, indent+1);
-//    mode_print_parts_xyz("move_part_beg_xyz", move_part_beg_xyz, indent+1);
+//    DEBUG_PRINTF("temp_next_mode: %s, temp_next_dir: %s\n", MODE_NAME[temp_next_mode].c_str(), MODE_DIR_NAME[temp_next_dir].c_str());
+    Serial.printf("temp_next_mode: %s, temp_next_dir: %s\n", MODE_NAME[temp_next_mode].c_str(), MODE_DIR_NAME[temp_next_dir].c_str());
   }
   if (local_debug) DEBUG_PRINT_END(routine, indent);
 } // end mode_check_new_mode
@@ -565,10 +586,11 @@ void mode_print_current_time(int8_t indent){
 void mode_execute_seq(int8_t indent){
   const static char *routine = "mode_execute_seq";
   uint8_t current_mode = mode_phase.mode;
-  uint8_t phase = mode_phase.phase;
+  uint8_t current_dir = mode_phase.direction;
+  uint8_t current_phase = mode_phase.phase;
   uint32_t start_time = mode_phase.start_time;
   // get the current mode sequence phase and parts
-  mode_seq_t mode_seq_phase = mode_seq[current_mode][phase];
+  mode_seq_t mode_seq_phase = mode_seq[current_mode][current_phase];
   mode_seq_part_t part[2];
   part[0] = mode_seq_phase.part[0];
   part[1] = mode_seq_phase.part[1];
@@ -590,9 +612,10 @@ void mode_execute_seq(int8_t indent){
     // update parts
     float current_seq_time = float(millis()-start_time)/1000.0; // get float current_seq_time = time since the start of this phase in seconds
     boolean move_done = false;
-//    boolean zero_vel = false;
-  //  uint8_t part_index = 0;
+    uint8_t next_phase = 0;
+
     mode_execute_move(current_seq_time, mode_seq_phase, &move_done, indent+1);
+
     if(move_done){
       // the move for all parts has completed, move to the next phase if there is one
       if (local_debug){
@@ -600,73 +623,73 @@ void mode_execute_seq(int8_t indent){
         DEBUG_PRINTLN("move_done == true");
       }
       if(mode_seq_phase.last_phase){
-        // depends on the just completed mode
-        // if the mode was FOLDING, we are FOLDED
-        // if the mode was UNFOLDING, wer are READY
-        // if the mode was WALKING, SIDESTEPPING, or ROTATING and ends with zero velocity, we are READY
-        // if the mode was WALKING, SIDESTEPPING, or ROTATING and ends with a NON-zero velocity, we are still WALKING, SIDESTEPPING, or ROTATING 
-  //      if(local_debug && (indent>=0)) DEBUG_PRINTLN("Beg mode_execute_seq, finished seqence");
         if (local_debug){
           DEBUG_INDENT(indent+1);
-          DEBUG_PRINTF("mode_seq_phase.last_phase == true, mode_next_mode: %s, mode_next_mode_dir: %s\n", MODE_NAME[mode_next_mode].c_str(), MODE_DIR_NAME[mode_next_mode_dir].c_str());
+          DEBUG_PRINTF("mode_seq_phase.last_phase == true, mode_next_mode(): %s, mode_next_dir(): %s\n", MODE_NAME[mode_next_mode()].c_str(), MODE_DIR_NAME[mode_next_dir()].c_str());
         }
-        switch(current_mode){
-          case MODE_FOLDED:
-            if(mode_next_mode == MODE_NONE){
-               mode_set(MODE_FOLDED, MODE_DIR_NONE, indent+1); // it's still folded, just reset the time
-            } else {
-              mode_set(mode_next_mode, mode_next_mode_dir, indent+1); // do what was requested, should only be MODE_FOLDED or MODE_UNFOLDING
-            }
-            break;
-          case MODE_FOLDING:
-            if(mode_next_mode == MODE_NONE){
-              mode_set(MODE_FOLDED, MODE_DIR_NONE, indent+1); // it's now folded
-            } else {
-              mode_set(mode_next_mode, mode_next_mode_dir, indent+1); // do what was requested, should only be MODE_NONE
-            }
-            break;
-          case MODE_UNFOLDING:
-            if(mode_next_mode == MODE_NONE){
-              mode_set(MODE_READY, MODE_DIR_NONE, indent+1); // now it's ready
-            } else {
-              mode_set(mode_next_mode, mode_next_mode_dir, indent+1); // do what was requested, should only be MODE_NONE
-            }
-            break;
-          case MODE_READY:
-            if(mode_next_mode == MODE_NONE){
-              mode_set(MODE_READY, MODE_DIR_NONE, indent+1); // it's still ready, just reset the time
-            } else {
-              mode_set(mode_next_mode, mode_next_mode_dir, indent+1); // do what was requested, could be any mode except MODE_FOLDED or MODE_UNFOLDING
-            }
-            break;
-          case MODE_WALKING_BEG:
-            if(mode_next_mode == MODE_NONE){
-               mode_set(MODE_FOLDED, MODE_DIR_NONE, indent+1); // it's still folded, just reset the time
-            } else {
-              mode_set(mode_next_mode, mode_next_mode_dir, indent+1); // do what was requested, should only be MODE_FOLDED or MODE_UNFOLDING
-            }
-            break;
-          case MODE_SIDESTEPPING_BEG:
-          case MODE_ROTATING_BEG:
-          case MODE_WALKING:
-          case MODE_SIDESTEPPING:
-          case MODE_ROTATING:
-          case MODE_WALKING_END:
-          case MODE_SIDESTEPPING_END:
-          case MODE_ROTATING_END:
-            mode_set(mode_next_mode, mode_next_mode_dir, indent+1); // continue with next mode which may be the same
-//            mode_set(MODE_READY, indent+1);
-            break;
-        }
+//        switch(current_mode){
+//          case MODE_FOLDED:
+//            if(mode_next_mode() == MODE_NONE){
+//              mode_set(MODE_FOLDED, MODE_DIR_NONE, indent+1); // it's still folded, just reset the time
+//            } else {
+//              mode_set(mode_next_mode(), mode_next_mode()_dir, indent+1); // do what was requested, should only be MODE_FOLDED or MODE_UNFOLDING
+//            }
+//            break;
+//          case MODE_FOLDING:
+//            if(mode_next_mode() == MODE_NONE){
+//              mode_set(MODE_FOLDED, MODE_DIR_NONE, indent+1); // it's now folded
+//            } else {
+//              mode_set(mode_next_mode, mode_next_mode_dir, indent+1); // do what was requested, should only be MODE_NONE
+//            }
+//            break;
+//          case MODE_UNFOLDING:
+//            if(mode_next_mode == MODE_NONE){
+//              mode_set(MODE_READY, MODE_DIR_NONE, indent+1); // now it's ready
+//            } else {
+//              mode_set(mode_next_mode, mode_next_mode_dir, indent+1); // do what was requested, should only be MODE_NONE
+//            }
+//            break;
+//          case MODE_READY:
+//            if(mode_next_mode == MODE_NONE){
+//              mode_set(MODE_READY, MODE_DIR_NONE, indent+1); // it's still ready, just reset the time
+//            } else {
+//              mode_set(mode_next_mode, mode_next_mode_dir, indent+1); // do what was requested, could be any mode except MODE_FOLDED or MODE_UNFOLDING
+//            }
+//            break;
+//          case MODE_WALKING_BEG:
+//            if(mode_next_mode == MODE_NONE){
+//               mode_set(MODE_FOLDED, MODE_DIR_NONE, indent+1); // it's still folded, just reset the time
+//            } else {
+//              mode_set(mode_next_mode, mode_next_mode_dir, indent+1); // do what was requested, should only be MODE_FOLDED or MODE_UNFOLDING
+//            }
+//            break;
+//          case MODE_SIDESTEPPING_BEG:
+//          case MODE_ROTATING_BEG:
+//          case MODE_WALKING:
+//          case MODE_SIDESTEPPING:
+//          case MODE_ROTATING:
+//          case MODE_WALKING_END:
+//          case MODE_SIDESTEPPING_END:
+//          case MODE_ROTATING_END:
+//            mode_set(mode_next_mode, mode_next_mode_dir, indent+1); // continue with next mode which may be the same
+////            mode_set(MODE_READY, indent+1);
+//            break;
+//        }
+        next_phase = 0;
+        mode_set(mode_next_mode(), mode_next_dir(), next_phase, indent+1);
       } else {
         // not the last phase, go to the next phase, adjust start_time
-  //      if(local_debug && (indent>=0)) DEBUG_PRINTLN("Beg mode_execute_seq, finished phase but not seqence");
         if (local_debug){
           DEBUG_INDENT(indent+1);
           DEBUG_PRINTLN("mode_seq_phase.last_phase != true");
         }
-        mode_phase.phase++;
-        mode_update_move_part_data(mode_phase.mode, mode_phase.direction, mode_phase.phase, indent+1); // update the data for the next move seq
+        if((mode_next_mode() == MODE_FOLDED) || (mode_next_mode() == MODE_READY)){
+          // don't set debug_new_mode
+        } else {
+          debug_set_new_mode();
+        }
+        next_phase = current_phase + 1;
+        mode_set(current_mode, current_dir, next_phase, indent+1); // update the data for the next move seq
       }
     } else {
       if (local_debug){
@@ -830,7 +853,7 @@ void mode_print_parts_activity_seq_part(const char *text, uint8_t part_activity[
 // called when there is a mode or phase change
 // will also update mode_phase.start_time and mode_phase.end_time
 //========================================================
-void mode_update_move_part_data(uint8_t new_mode, uint8_t new_mode_dir, uint8_t new_phase, int8_t indent){
+void mode_update_move_part_data(uint8_t new_mode, uint8_t new_dir, uint8_t new_phase, int8_t indent){
   // use the move_seq to calculate to move parameters and move_points for the active parts in this phase of the move_sequence
   // need to create the move parameters (distance, direction, up_down, v_max, a_max, v_beg, v_end) for each part
   // mode_seq[mode][phase].part[i] contains part_id, and d[XYZ] and v[XYZ] for each of the two moving parts
@@ -842,7 +865,7 @@ void mode_update_move_part_data(uint8_t new_mode, uint8_t new_mode_dir, uint8_t 
   if (local_debug){
     DEBUG_PRINT_BEG(routine, indent);
     DEBUG_INDENT(indent+1);
-    DEBUG_PRINTF("new_mode: %s, new_mode_dir: %s, new_phase: %u\n", MODE_NAME[new_mode].c_str(), MODE_DIR_NAME[new_mode_dir].c_str(), new_phase);
+    DEBUG_PRINTF("new_mode: %s, new_mode_dir: %s, new_phase: %u\n", MODE_NAME[new_mode].c_str(), MODE_DIR_NAME[new_dir].c_str(), new_phase);
     mode_print_current_time(indent+1);
   }
 
@@ -854,8 +877,14 @@ void mode_update_move_part_data(uint8_t new_mode, uint8_t new_mode_dir, uint8_t 
   } else {
     // we're not shut down, continue as normal
     // create a variable to hold the next move_seq_phase
-    mode_seq_t next_seq_phase = mode_seq[new_mode][new_phase]; // next_move_seq_phase for this move seq
-  
+    mode_seq_t next_seq_phase;
+    if(false){
+      next_seq_phase = mode_seq[new_mode][new_phase]; // next_move_seq_phase for this move seq
+    } else {
+      mode_create_new_seq_phase(&next_seq_phase, new_mode, new_dir, new_phase, indent+1); // next_move_seq_phase for this move seq
+    }
+    mode_print_sequence(next_seq_phase, indent+1);
+
     // create temporary versions of next move_part_parameters, move_part_beg_xyz, move_part_activity and move_part_seq_part
     float next_part_parameters[MODE_SEQ_PART_NUM][XYZ][LEGS_PARAM_NUM]; // parameters for each of the part move
     float next_part_beg_xyz[MODE_PART_NUM][XYZ]; // xyz coordinates of each part at the beginning of the current move seq (each leg and the body)
@@ -956,7 +985,7 @@ void mode_update_move_part_data(uint8_t new_mode, uint8_t new_mode_dir, uint8_t 
     
     // update mode_phase.mode and seq
     mode_phase.mode = new_mode;
-    mode_phase.direction = new_mode_dir;
+    mode_phase.direction = new_dir;
     mode_phase.phase = new_phase;
     mode_seq_t new_mode_seq = mode_seq[new_mode][new_phase];
   }
@@ -972,6 +1001,82 @@ void mode_update_move_part_data(uint8_t new_mode, uint8_t new_mode_dir, uint8_t 
   }
 } // end mode_update_move_part_data
 
+
+//========================================================
+// mode_create_new_seq_phase()
+//========================================================
+void mode_create_new_seq_phase(mode_seq_t *new_seq_phase, uint8_t new_mode, uint8_t new_dir, uint8_t new_phase, int8_t indent){
+  const static char *routine = "mode_create_new_seq_phase";
+  LOCAL_DEBUG_ENABLED
+  if (local_debug){
+    DEBUG_PRINT_BEG(routine, indent);
+    DEBUG_INDENT(indent+1);
+    DEBUG_PRINTF("new_mode: %s, new_dir: %s, new_phase: %d\n", MODE_NAME[new_mode].c_str(), MODE_DIR_NAME[new_dir].c_str(), new_phase);
+  }
+
+  //if new_dir == MODE_DIR_PLUS, just use normal sequence phase data
+  //if new_dir == MODE_DIR_MINUS, use reversed sequence phase data
+  //  to reverse MODE_WALKING_BEG, MODE_WALKING, MODE_WALKING_END
+  //    switch legs: 0=>2, 1=>3, 2=>0, 3=>1 
+  //    reverse sign of all (leg and body) d[y] and v[y]values, 
+  //  to reverse MODE_SIDESTEPPING_BEG, MODE_SIDESTEPPING, MODE_SIDESTEPPING_END
+  //    switch legs: 0=>2, 1=>3, 2=>0, 3=>1
+  //    reverse sign of all (leg and body) d[x] and v[x]values, 
+  //  to reverse MODE_ROTATING_BEG, MODE_ROTATING, MODE_ROTATING_END
+  //    ??switch legs: 0=>2, 1=>3, 2=>0, 3=>1
+  //    ??reverse sign of all (leg and body) d[x] and v[x]values, 
+
+  const uint8_t X = 0;
+  const uint8_t Y = 1;
+  const uint8_t Z = 2;
+  float xyz_signs[XYZ] = { 1.0, 1.0, 1.0};
+//  float body_xyz_signs[XYZ] = { 1.0, 1.0, 1.0};
+  uint8_t part_map[MODE_PART_NUM+1] = {0, 1, 2, 3, 4, 5};  // default is to keep legs and body and none as is
+  const uint8_t part_map_swapped[MODE_PART_NUM+1] = {2, 3, 0, 1, 4, 5}; // reorder legs, keep body and none as is
+  
+  if(new_dir == MODE_DIR_MINUS){
+    // reverse
+    switch(new_mode){
+      case MODE_WALKING:
+      case MODE_WALKING_BEG:
+      case MODE_WALKING_END:
+        for(uint8_t i=0; i<MODE_PART_NUM+1; i++) part_map[i] = part_map_swapped[i]; // use part_map_swapped ordering
+        xyz_signs[X] = -1.0; // reverse x's
+        xyz_signs[Y] = -1.0; // reverse y's
+        break;
+      case MODE_SIDESTEPPING:
+      case MODE_SIDESTEPPING_BEG:
+      case MODE_SIDESTEPPING_END:
+        for(uint8_t i=0; i<MODE_PART_NUM+1; i++) part_map[i] = part_map_swapped[i]; // use part_map_swapped ordering
+        xyz_signs[X] = -1.0; // reverse x's
+        break;
+      case MODE_ROTATING:
+      case MODE_ROTATING_BEG:
+      case MODE_ROTATING_END:
+        // use default part ordering
+        xyz_signs[X] = -1.0; // reverse x's
+        xyz_signs[Y] = -1.0; // reverse y's
+        break;
+    }
+  }
+
+  new_seq_phase->last_phase = mode_seq[new_mode][new_phase].last_phase;
+  new_seq_phase->phase_name = mode_seq[new_mode][new_phase].phase_name;
+
+  for(uint8_t part=0; part<MODE_SEQ_PART_NUM; part++){
+    mode_seq_part_t seq_part = mode_seq[new_mode][new_phase].part[part];
+    new_seq_phase->part[part].part_id = part_map[seq_part.part_id]; // change leg order
+    for(uint8_t coor=0; coor<XYZ; coor++){
+      new_seq_phase->part[part].d[coor] = xyz_signs[coor] * seq_part.d[coor]; // reverse signs where required
+      new_seq_phase->part[part].v[coor] = xyz_signs[coor] * seq_part.v[coor]; // reverse signs where required
+    }
+  }
+  
+  if (local_debug){
+//    mode_print_sequence(new_seq_phase, indent+1);
+    DEBUG_PRINT_END(routine, indent);
+  }
+} // end mode_create_new_seq_phase
 
 //========================================================
 // mode_execute_move()
@@ -1379,21 +1484,21 @@ void mode_create_next_part_beg_xyz(mode_seq_t next_seq_phase, float part_paramet
 } // end mode_create_next_part_beg_xyz
 
 
-//========================================================
-// mode_set_folded
-//========================================================
-void mode_set_folded(int8_t indent){
-  mode_set(MODE_FOLDED, MODE_DIR_NONE, indent+1);
-} // end mode_set_folded
-
-
-//========================================================
-// mode_set_ready
-//========================================================
-void mode_set_ready(int8_t indent){
-  mode_set(MODE_READY, MODE_DIR_NONE, indent+1);
-} // end mode_set_ready
-
+////========================================================
+//// mode_set_folded
+////========================================================
+//void mode_set_folded(int8_t indent){
+//  mode_set(MODE_FOLDED, MODE_DIR_NONE, indent+1);
+//} // end mode_set_folded
+//
+//
+////========================================================
+//// mode_set_ready
+////========================================================
+//void mode_set_ready(int8_t indent){
+//  mode_set(MODE_READY, MODE_DIR_NONE, indent+1);
+//} // end mode_set_ready
+//
 //
 ////========================================================
 //// mode_set_dir
@@ -1404,26 +1509,67 @@ void mode_set_ready(int8_t indent){
 
 
 //========================================================
+// mode_set_next
+// save next mode and direction
+//========================================================
+void mode_set_next(uint8_t new_mode, uint8_t new_dir, int8_t indent){
+  const static char *routine = "mode_set_next";
+  LOCAL_DEBUG_ENABLED
+  if(local_debug){
+    DEBUG_INDENT(indent);
+    DEBUG_PRINTF("Beg %s, new_mode: %s, new_mode_dir: %s\n", routine, MODE_NAME[new_mode].c_str(), MODE_DIR_NAME[new_dir].c_str());
+    mode_print_current_time(indent+1);
+  }
+
+  gmode_next_mode = new_mode;
+  gmode_next_dir = new_dir;
+  
+  if(local_debug){
+    DEBUG_PRINT_END(routine, indent);
+  }
+} // end mode_set_next
+
+
+//========================================================
+// mode_next_mode
+//========================================================
+uint8_t mode_next_mode(void){
+  return gmode_next_mode;
+} // end mode_next_mode
+
+
+//========================================================
+// mode_next_dir
+//========================================================
+uint8_t mode_next_dir(void){
+  return gmode_next_dir;
+} // end mode_next_dir
+
+
+//========================================================
 // mode_set
-// change to new mode, reset phase, update start_time and end_time
+// change to new mode, new direction, new phase, update start_time and end_time
 // update mode_move_part_points for new sequence
 //========================================================
-void mode_set(uint8_t new_mode, uint8_t new_mode_dir, int8_t indent){
+void mode_set(uint8_t new_mode, uint8_t new_mode_dir, uint8_t new_mode_phase, int8_t indent){
   const static char routine[] = "mode_set";
 //  const boolean local_debug = true;
-  if((mode_phase.mode != new_mode) || (mode_phase.direction != new_mode_dir)){
-    debug_set_new_mode();
+  uint8_t current_mode = mode_phase.mode;
+  uint8_t current_dir = mode_phase.direction;
+  uint8_t current_phase = mode_phase.phase;
+  if((new_mode == current_mode) && (new_mode_dir == current_dir) && (new_mode_phase == current_phase)){
+    // don't set debug_new_mode since we're probably looping at MODE_READY, MODE_FOLDED or MODE_SHUT_DOWN
   } else {
-    debug_clr_new_mode();
+    debug_set_new_mode(); // set new_mode to enable debug
   }
   LOCAL_DEBUG_ENABLED
   if (local_debug){
     DEBUG_INDENT(indent);
-    DEBUG_PRINTF("Beg mode_set, new_mode: %s, new_mode_dir: %s\n", MODE_NAME[new_mode].c_str(), MODE_DIR_NAME[new_mode_dir].c_str());
+    DEBUG_PRINTF("Beg %s, new_mode: %s, new_mode_dir: %s, new_mode_phase: %d\n", routine, MODE_NAME[new_mode].c_str(), MODE_DIR_NAME[new_mode_dir].c_str(), new_mode_phase);
     mode_print_current_time(indent+1);
   }
-  uint8_t new_phase = 0;
-  mode_update_move_part_data(new_mode, new_mode_dir, new_phase, indent+1);
+//  uint8_t new_phase = 0;
+  mode_update_move_part_data(new_mode, new_mode_dir, new_mode_phase, indent+1);
 
   if (local_debug) DEBUG_PRINT_END(routine, indent);
 } // end mode_set

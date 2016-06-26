@@ -7,7 +7,7 @@
   #define debug_h
   #include "Arduino.h"
 
-//  #define DEBUG // comment this out to disable debug printout
+  #define DEBUG // comment this out to disable debug printout
 
   #ifdef DEBUG
 //    #define LOCAL_DEBUG_ENABLED   boolean local_debug; \

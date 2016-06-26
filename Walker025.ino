@@ -81,11 +81,11 @@ void loop(){
 //  body_update();
 //  position_update();
 //  legs_update();
-  mode_display_position();
-  servo_print_angle();
-  servo_print_target();
+//  mode_display_position();
+//  servo_print_angle();
+//  servo_print_target();
   debug_clr_new_mode(); // clear new_mode
-  delay(10);
+  delay(20); // note, if this is larger than our minumum move time (100 msec) then the system will continually fall behind the current time
 } // end loop
 
 
