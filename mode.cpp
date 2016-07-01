@@ -1580,6 +1580,14 @@ uint8_t mode_next_dir(void){
 
 
 //========================================================
+// mode_shut_down
+//========================================================
+void mode_shut_down(int8_t indent){
+  mode_set(MODE_SHUT_DOWN, MODE_DIR_PLUS, 0, indent);
+} // end mode_shut_down
+
+
+//========================================================
 // mode_set
 // change to new mode, new direction, new phase, update start_time and end_time
 // update mode_move_part_points for new sequence

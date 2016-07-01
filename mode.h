@@ -149,6 +149,7 @@
   void mode_set_next(uint8_t new_mode, uint8_t new_mode_dir, int8_t indent);
   uint8_t mode_next_mode(void);
   uint8_t mode_next_dir(void);
+  void mode_shut_down(int8_t indent);
   void mode_set(uint8_t new_mode, uint8_t new_mode_dir, uint8_t new_mode_phase, int8_t indent);
   mode_phase_t mode_mode_phase_get(void);
   uint8_t mode_mode_get(void);
