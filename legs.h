@@ -63,6 +63,8 @@
   const float C90 = cos(PI*90.0/180.0); // absolute angle 105 degrees
   const float S90 = sin(PI*90.0/180.0); // absolute angle 105 degrees
   const float C45 = cos(PI*45.0/180.0); // same as sqrt(0.5)
+
+  const float READY_Z_ADJ = -00.0; // negative values lower the body height, must be between +14 to -96
   //                                         =  (center_2_pivot         + pivot_2_hip           + hip_2_knee          + knee_2_kneecap           - kneecap_2_foot     )
   const static float LEGS_XYZ_RETRACTED[XYZ] = {(LEGS_CENTER_2_PIVOT_XY + C90*LEGS_PIVOT_2_HIP  + 0.0                 + C90*LEGS_KNEE_2_KNEECAP  - 0.0                ),
                                                 (LEGS_CENTER_2_PIVOT_XY + S90*LEGS_PIVOT_2_HIP  + 0.0                 + S90*LEGS_KNEE_2_KNEECAP  - 0.0                ),
@@ -71,7 +73,7 @@
   //                                         =  (center_2_pivot         + pivot_2_hip           + hip_2_knee          + knee_2_kneecap           - kneecap_2_foot     )
   const static float LEGS_XYZ_READY[XYZ]     = {(LEGS_CENTER_2_PIVOT_XY + C45*LEGS_PIVOT_2_HIP  + C45*LEGS_HIP_2_KNEE + C45*LEGS_KNEE_2_KNEECAP  - 0.0                ),
                                                 (LEGS_CENTER_2_PIVOT_XY + C45*LEGS_PIVOT_2_HIP  + C45*LEGS_HIP_2_KNEE + C45*LEGS_KNEE_2_KNEECAP  - 0.0                ),
-                                                (0.0                    + 0.0                   + 0.0                 + 0.0                      - LEGS_KNEECAP_2_FOOT)};
+                                                (0.0                    + 0.0                   + 0.0                 + 0.0                      - (LEGS_KNEECAP_2_FOOT + READY_Z_ADJ))};
 
   const float LEGS_FOOT_XYZ_SIGNS[NUM_LEGS][XYZ] = {{ 1.0, 1.0, 1.0},
                                                     { 1.0,-1.0, 1.0},
@@ -83,12 +85,12 @@
 //  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{200.0, 200.0},
 //                                         {200.0, 200.0},
 //                                         {200.0, 200.0}}; // linear velocity and acceleration max
-  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{640.0, 2000.0},
-                                         {640.0, 2000.0},
-                                         {640.0, 2000.0}}; // linear velocity and acceleration max
-//  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{640.0, 320.0},
-//                                         {640.0, 320.0},
-//                                         {640.0, 320.0}}; // linear velocity and acceleration max
+//  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{640.0, 2000.0},
+//                                         {640.0, 2000.0},
+//                                         {640.0, 2000.0}}; // linear velocity and acceleration max
+  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{640.0, 320.0},
+                                         {640.0, 320.0},
+                                         {640.0, 320.0}}; // linear velocity and acceleration max
 //  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{320.0, 160.0},
 //                                         {320.0, 160.0},
 //                                         {320.0, 160.0}}; // linear velocity and acceleration max

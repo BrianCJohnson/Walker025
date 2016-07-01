@@ -28,7 +28,12 @@
 #include "legs.h"
 #include "mode.h"
 
-unsigned long last_time;
+unsigned long last_loop_time;
+// Pin 13 has an LED connected on most Arduino boards.
+// Pin 11 has the LED on Teensy 2.0
+// Pin 6  has the LED on Teensy++ 2.0
+// Pin 13 has the LED on Teensy 3.0
+const uint8_t LED_PIN = 13;
 
 //====================================================
 // Walker setup
@@ -49,8 +54,9 @@ void setup(){
   legs_setup(indent+1);
 //  legs_position_tests();
   mode_setup(indent+1);
-  last_time = millis();
+  last_loop_time = millis();
   if(local_debug) DEBUG_PRINT_END(routine, indent);
+  pinMode(LED_PIN, OUTPUT);     
 }
 // end setup
 
@@ -62,17 +68,19 @@ void loop(){
   //static unsigned long last_time = 0;
   const static int8_t indent = 0; // for debug prints
   unsigned long this_time = millis();
+  static unsigned long led_time = millis();
+  const static unsigned long led_period = 1000;
   boolean show_time = true;
   if(show_time){
     Serial.print("In loop, cycle time: ");
-    Serial.print(this_time - last_time);
+    Serial.print(this_time - last_loop_time);
     Serial.print(", mode: ");
     Serial.print(MODE_NAME[mode_mode_phase_get().mode]);
     Serial.print(", phase: ");
     Serial.println(mode_mode_phase_get().phase);
 //    Serial.printf("%s, %s, %d\n", __FILE__, __func__, __LINE__);
   }
-  last_time = this_time;
+  last_loop_time = this_time;
 //  servo_math_test();
 //  servo_test();
   sbus_update(indent+1);
@@ -81,11 +89,22 @@ void loop(){
 //  body_update();
 //  position_update();
 //  legs_update();
-//  mode_display_position();
-//  servo_print_angle();
-//  servo_print_target();
+  mode_display_position();
+  servo_print_angle();
+  servo_print_target();
   debug_clr_new_mode(); // clear new_mode
-  delay(20); // note, if this is larger than our minumum move time (100 msec) then the system will continually fall behind the current time
+//  // now wait until the planned period is over, if it's not over already
+//  while((millis() - last_loop_time) < 50){
+//    // do nothing
+//  }
+  delay(50); // note, if this is larger than our minumum move time (100 msec) then the system will continually fall behind the current time
+  this_time = millis();
+  if((this_time - led_time) > led_period){
+    digitalWrite(LED_PIN, LOW);   // turn the LED off (LOW is the voltage level) at the end of the period
+    led_time = this_time;
+  } else if((this_time - led_time) > led_period>>1){
+    digitalWrite(LED_PIN, HIGH);   // turn the LED on (HIGH is the voltage level) half way through the period
+  }
 } // end loop
 
 
