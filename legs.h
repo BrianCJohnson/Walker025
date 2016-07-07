@@ -82,15 +82,17 @@
 
 //  float legs_foot_xyz_retracted[NUM_LEGS][XYZ]; // calculated at setup from above
 //  float legs_foot_xyz_ready[NUM_LEGS][XYZ]; // calculated at setup from above
-//  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{200.0, 200.0},
-//                                         {200.0, 200.0},
-//                                         {200.0, 200.0}}; // linear velocity and acceleration max
-//  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{640.0, 2000.0},
-//                                         {640.0, 2000.0},
-//                                         {640.0, 2000.0}}; // linear velocity and acceleration max
-  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{640.0, 320.0},
-                                         {640.0, 320.0},
-                                         {640.0, 320.0}}; // linear velocity and acceleration max
+
+  const float LEGS_ANG_VA_MAX[XYZ][2] = {{0.5, 1.5},
+                                         {0.5, 1.5},
+                                         {0.5, 1.5}}; // angular velocity and acceleration max
+
+  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{1000.0, 4000.0},
+                                         {1000.0, 4000.0},
+                                         {1000.0, 2000.0}}; // linear velocity and acceleration max
+//  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{640.0, 320.0},
+//                                         {640.0, 320.0},
+//                                         {640.0, 320.0}}; // linear velocity and acceleration max
 //  const float LEGS_XYZ_VA_MAX[XYZ][2] = {{320.0, 160.0},
 //                                         {320.0, 160.0},
 //                                         {320.0, 160.0}}; // linear velocity and acceleration max

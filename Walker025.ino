@@ -71,7 +71,7 @@ void loop(){
   unsigned long this_time = millis();
   static unsigned long led_time = millis();
   const static unsigned long led_period = 1000;
-  boolean show_time = false;
+  boolean show_time = true;
   if(show_time){
     Serial.print("In loop, cycle time: ");
     Serial.print(this_time - last_loop_time);
@@ -90,9 +90,9 @@ void loop(){
 //  body_update();
 //  position_update();
 //  legs_update();
-//  mode_display_position();
-//  servo_print_angle();
-//  servo_print_target();
+  mode_display_position();
+  servo_print_angle();
+  servo_print_target();
   debug_clr_new_mode(); // clear new_mode
 //  // now wait until the planned period is over, if it's not over already
 //  while((millis() - last_loop_time) < 50){

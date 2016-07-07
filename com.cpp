@@ -50,9 +50,6 @@ void com_indent(int8_t indent){
 void com_print_beg(const char *routine, int8_t indent){
   com_indent(indent);
   Serial.printf("Beg %s, millis(): %d\n", routine, millis());
-//  Serial.print("Beg ");
-//  Serial.print(routine);
-  // print time?
 } // com_print_beg
 
 
@@ -62,9 +59,6 @@ void com_print_beg(const char *routine, int8_t indent){
 void com_print_beg2(const char *routine, const char *text, int8_t indent){
   com_indent(indent);
   Serial.printf("Beg %s: %s, millis(): %d\n", routine, text, millis());
-//  Serial.print("Beg ");
-//  Serial.print(routine);
-  // print time?
 } // com_print_beg
 
 
@@ -74,9 +68,6 @@ void com_print_beg2(const char *routine, const char *text, int8_t indent){
 void com_print_end(const char *routine, int8_t indent){
   com_indent(indent);
   Serial.printf("End %s, millis(): %d\n", routine, millis());
-//  Serial.print("End ");
-//  Serial.print(routine);
-  // print time?
 } // com_print_end
 
 
@@ -107,10 +98,10 @@ void com_sign_mag(float number, int8_t *sign, float *mag){
 // com_err_msg_int
 //========================================================
 void com_err_msg_int(const char routine[], const char err_msg[]){
-  Serial.print("COM_ERR_MSG: routine:");
+  Serial.print("COM_ERR_MSG: routine: ");
   Serial.print(routine);
   Serial.print(", error: ");
-  Serial.print(err_msg);
+  Serial.println(err_msg);
 } // end com_err_msg_int
 
 

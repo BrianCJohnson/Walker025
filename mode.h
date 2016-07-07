@@ -59,13 +59,14 @@
   };
   typedef struct mode_seq_part_s mode_seq_part_t;
 
-  const static uint8_t MODE_SEQ_PART_NUM = 2;
+  const static uint8_t MODE_SEQ_PART_NUM = 3; // we'll support up to 3 moving parts: BDY_D, BDY_A, LEG_x
   
   const static uint8_t MODE_SEQ_PART0 = 0;
   const static uint8_t MODE_SEQ_PART1 = 1;
-  const static uint8_t MODE_SEQ_NONE = 2;
+  const static uint8_t MODE_SEQ_PART2 = 2;
+  const static uint8_t MODE_SEQ_NONE = 3;
   //const static uint8_t MODE_SEQ_PART_NUM = 3;
-  const String MODE_SEQ_PART_NAME[MODE_SEQ_PART_NUM+1] = {"SEQ_PART_0", "SEQ_PART_1", "SEQ_PART_X"};
+  const String MODE_SEQ_PART_NAME[MODE_SEQ_PART_NUM+1] = {"SEQ_PART_0", "SEQ_PART_1", "SEQ_PART_2", "SEQ_PART_X"};
   
   struct mode_seq_s {
     boolean last_phase; // true if this is the last phase of a move sequence
@@ -101,19 +102,22 @@
   
   const static uint8_t MODE_PART_ACTIVITY_SUPPORT_LEG = 0;
   const static uint8_t MODE_PART_ACTIVITY_ACTIVE_LEG = 1;
-  const static uint8_t MODE_PART_ACTIVITY_STATIC_BODY = 2;
-  const static uint8_t MODE_PART_ACTIVITY_ACTIVE_BODY = 3;
-  const static uint8_t MODE_PART_ACTIVITY_NUM = 4;
-  const String MODE_PART_ACTIVITY_NAME[MODE_PART_ACTIVITY_NUM] = {"SUPPORT_LEG", "ACTIVE_LEG", "STATIC_BODY", "ACTIVE_BODY"};
+  const static uint8_t MODE_PART_ACTIVITY_STATIC_BDY_D = 2;
+  const static uint8_t MODE_PART_ACTIVITY_ACTIVE_BDY_D = 3;
+  const static uint8_t MODE_PART_ACTIVITY_STATIC_BDY_A = 4;
+  const static uint8_t MODE_PART_ACTIVITY_ACTIVE_BDY_A = 5;
+  const static uint8_t MODE_PART_ACTIVITY_NUM = 6;
+  const String MODE_PART_ACTIVITY_NAME[MODE_PART_ACTIVITY_NUM] = {"SUPPORT_LEG", "ACTIVE_LEG", "STATIC_BDY_D", "ACTIVE_BDY_D", "STATIC_BDY_A", "ACTIVE_BDY_A"};
 
-  const static uint8_t MODE_PART_LEG0 = 0;
-  const static uint8_t MODE_PART_LEG1 = 1;
-  const static uint8_t MODE_PART_LEG2 = 2;
-  const static uint8_t MODE_PART_LEG3 = 3;
-  const static uint8_t MODE_PART_BODY = 4;
-  const static uint8_t MODE_PART_NONE = 5;
-  const static uint8_t MODE_PART_NUM = 5;
-  const String MODE_PART_NAME[MODE_PART_NUM+1] = {"LEG0", "LEG1", "LEG2", "LEG3", "BODY", "NONE"};
+  const static uint8_t MODE_PART_LEG_0 = 0;
+  const static uint8_t MODE_PART_LEG_1 = 1;
+  const static uint8_t MODE_PART_LEG_2 = 2;
+  const static uint8_t MODE_PART_LEG_3 = 3;
+  const static uint8_t MODE_PART_BDY_D = 4;
+  const static uint8_t MODE_PART_BDY_A = 5;
+  const static uint8_t MODE_PART_NONE_ = 6;
+  const static uint8_t MODE_PART_NUM = 6;
+  const String MODE_PART_NAME[MODE_PART_NUM+1] = {"LEG_0", "LEG_1", "LEG_2", "LEG_3", "BDY_D", "BDY_A", "NONE_"};
 
 //  const static uint8_t MODE_ACTIVE_PART_NUM = 2; // only allowing 2 parts to be active at a time
   const static uint8_t MODE_PHASE_MAX_NUM = 7; // only allowing 7 phases in a sequence
